@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -85,12 +84,14 @@ export default function DailyLogPage() {
                   </div>
                   <span className="text-lg font-bold text-indigo-400">{sleep[0]}<span className="text-sm font-medium text-zinc-500 ml-1">hrs</span></span>
                 </div>
-                <Slider
-                  value={sleep}
-                  onValueChange={(val) => setSleep(val as number[])}
-                  max={12}
-                  step={0.5}
-                  className="[&_[role=slider]]:h-5 [&_[role=slider]]:w-5"
+                <input
+                  type="range"
+                  min="0"
+                  max="12"
+                  step="0.5"
+                  value={sleep[0]}
+                  onChange={(e) => setSleep([parseFloat(e.target.value)])}
+                  className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                 />
               </div>
 
@@ -105,13 +106,14 @@ export default function DailyLogPage() {
                   </div>
                   <span className={`text-lg font-bold ${energyColor}`}>{energy[0]}<span className="text-sm font-medium text-zinc-500 ml-1">/10</span></span>
                 </div>
-                <Slider
-                  value={energy}
-                  onValueChange={(val) => setEnergy(val as number[])}
-                  min={1}
-                  max={10}
-                  step={1}
-                  className="[&_[role=slider]]:h-5 [&_[role=slider]]:w-5"
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={energy[0]}
+                  onChange={(e) => setEnergy([parseInt(e.target.value, 10)])}
+                  className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
               </div>
             </div>

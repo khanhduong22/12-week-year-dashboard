@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { ChevronLeft, Save, Plus, Target, BrainCircuit, Cpu, Dumbbell, Rocket } from "lucide-react";
 import Link from "next/link";
-import { Slider } from "@/components/ui/slider";
 
 export default function ConfigPage() {
   const [tactics, setTactics] = useState([
-    { id: 1, name: "3 Giờ Deep Work (Linkpul)", category: "internal", weight: 5 },
+    { id: 1, name: "Luyện 2 bài LeetCode & System Design", category: "value", weight: 5 },
     { id: 2, name: "2 Giờ học Claude Architect", category: "learning", weight: 4 },
     { id: 3, name: "Ngủ trước 9:00 PM", category: "health", weight: 3 },
     { id: 4, name: "Tập 5 bài Compound", category: "health", weight: 3 },
@@ -119,13 +118,14 @@ export default function ConfigPage() {
                   </div>
                   
                   <div className="pt-2">
-                    <Slider
-                      value={[t.weight]}
-                      onValueChange={(val) => updateWeight(t.id, (val as number[])[0])}
-                      min={1}
-                      max={5}
-                      step={1}
-                      className="[&_[role=slider]]:h-5 [&_[role=slider]]:w-5"
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      value={t.weight}
+                      onChange={(e) => updateWeight(t.id, parseInt(e.target.value, 10))}
+                      className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                     />
                     <div className="flex justify-between mt-2 text-xs text-zinc-500 font-medium px-1">
                       <span>Low Impact (1)</span>
