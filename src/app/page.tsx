@@ -5,6 +5,7 @@ import { CountdownHeader } from "@/components/dashboard/CountdownHeader";
 import { BscGrid } from "@/components/dashboard/BscGrid";
 import { ScorecardChecklist, ChecklistState } from "@/components/dashboard/ScorecardChecklist";
 import { EnergyChart } from "@/components/dashboard/EnergyChart";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const [checklist, setChecklist] = useState<ChecklistState>({
@@ -32,11 +33,16 @@ export default function DashboardPage() {
       }`}
     >
       <main className="max-w-6xl mx-auto p-6 pt-12 md:p-12 text-foreground">
-        <div className="mb-8 space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">12 Week Year Architect</h1>
-          <p className="text-muted-foreground">
-            Monitor your system, achieve your goals, and master your routines.
-          </p>
+        <div className="mb-8 space-y-2 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">12 Week Year Architect</h1>
+            <p className="text-muted-foreground">
+              Monitor your system, achieve your goals, and master your routines.
+            </p>
+          </div>
+          <Link href="/log" className="bg-zinc-100 hover:bg-white text-zinc-900 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm">
+            Daily Log
+          </Link>
         </div>
 
         {isWarning && (

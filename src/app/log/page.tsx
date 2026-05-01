@@ -1,0 +1,227 @@
+"use client";
+
+import { useState } from "react";
+import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+// Types
+type BlockStatus = "failed" | "partial" | "nailed";
+
+export default function DailyLogPage() {
+  // State
+  const [sleep, setSleep] = useState([7]);
+  const [energy, setEnergy] = useState([8]);
+  const [strategicBlock, setStrategicBlock] = useState<BlockStatus>("failed");
+  const [bufferBlock, setBufferBlock] = useState<BlockStatus>("failed");
+  const [tactics, setTactics] = useState({
+    snack: false,
+    workout: false,
+    sleepTarget: false,
+  });
+
+  const isAllTacticsDone = Object.values(tactics).every(Boolean);
+
+  const cycleStatus = (current: BlockStatus): BlockStatus => {
+    if (current === "failed") return "partial";
+    if (current === "partial") return "nailed";
+    return "failed";
+  };
+
+  const getStatusColor = (status: BlockStatus) => {
+    if (status === "nailed") return "bg-green-500/20 text-green-400 border-green-500/30";
+    if (status === "partial") return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+    return "bg-zinc-800/50 text-zinc-500 border-white/5";
+  };
+
+  const getStatusText = (status: BlockStatus) => {
+    if (status === "nailed") return "Nailed It!";
+    if (status === "partial") return "Partial";
+    return "Failed / Skipped";
+  };
+
+  // Helper for Energy Gradient
+  const energyColors = [
+    "text-red-500", "text-orange-500", "text-yellow-500", 
+    "text-lime-500", "text-green-500", "text-emerald-400"
+  ];
+  const energyColor = energyColors[Math.floor((energy[0] - 1) / 2)] || "text-emerald-400";
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-24 font-sans selection:bg-zinc-800">
+      <main className="max-w-2xl mx-auto px-4 pt-8">
+        {/* Navigation & Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
+            <ChevronLeft className="w-6 h-6 text-zinc-400" />
+          </Link>
+          <div className="flex items-center gap-2 bg-orange-500/10 text-orange-400 px-3 py-1.5 rounded-full border border-orange-500/20">
+            <Flame className="w-4 h-4 fill-orange-400" />
+            <span className="text-sm font-semibold tracking-wide">12 Day Streak</span>
+          </div>
+        </div>
+
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Daily Execution Log</h1>
+          <p className="text-zinc-400 font-medium">Monday, Oct 24 • Week 3, Day 1</p>
+        </div>
+
+        <div className="space-y-8">
+          {/* Section 1: The Engine (Bio-Metrics) */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">The Engine</h2>
+            
+            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 space-y-8">
+              {/* Sleep Slider */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-500/10 rounded-xl">
+                      <Moon className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <span className="font-medium">Sleep Duration</span>
+                  </div>
+                  <span className="text-lg font-bold text-indigo-400">{sleep[0]}<span className="text-sm font-medium text-zinc-500 ml-1">hrs</span></span>
+                </div>
+                <Slider
+                  value={sleep}
+                  onValueChange={(val) => setSleep(val as number[])}
+                  max={12}
+                  step={0.5}
+                  className="[&_[role=slider]]:h-5 [&_[role=slider]]:w-5"
+                />
+              </div>
+
+              {/* Energy Slider */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-500/10 rounded-xl">
+                      <Zap className={`w-5 h-5 ${energyColor} fill-current`} />
+                    </div>
+                    <span className="font-medium">Energy Level</span>
+                  </div>
+                  <span className={`text-lg font-bold ${energyColor}`}>{energy[0]}<span className="text-sm font-medium text-zinc-500 ml-1">/10</span></span>
+                </div>
+                <Slider
+                  value={energy}
+                  onValueChange={(val) => setEnergy(val as number[])}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="[&_[role=slider]]:h-5 [&_[role=slider]]:w-5"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Section 2: Time Blocks */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">Time Blocks</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Strategic Block */}
+              <button 
+                onClick={() => setStrategicBlock(cycleStatus(strategicBlock))}
+                className={cn(
+                  "p-5 rounded-3xl border text-left transition-all duration-300 active:scale-[0.98]",
+                  getStatusColor(strategicBlock)
+                )}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-2.5 bg-black/20 rounded-xl">
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 bg-black/20 rounded-full">
+                    {getStatusText(strategicBlock)}
+                  </span>
+                </div>
+                <h3 className="font-bold text-lg text-zinc-100 mb-1">Strategic Block</h3>
+                <p className="text-sm opacity-80">3h Uninterrupted (Linkpul / Claude)</p>
+              </button>
+
+              {/* Buffer Block */}
+              <button 
+                onClick={() => setBufferBlock(cycleStatus(bufferBlock))}
+                className={cn(
+                  "p-5 rounded-3xl border text-left transition-all duration-300 active:scale-[0.98]",
+                  getStatusColor(bufferBlock)
+                )}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-2.5 bg-black/20 rounded-xl">
+                    <Mail className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 bg-black/20 rounded-full">
+                    {getStatusText(bufferBlock)}
+                  </span>
+                </div>
+                <h3 className="font-bold text-lg text-zinc-100 mb-1">Buffer Block</h3>
+                <p className="text-sm opacity-80">1h Emails, Admin & Routing</p>
+              </button>
+            </div>
+          </section>
+
+          {/* Section 3: Tactics Execution */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1 flex items-center justify-between">
+              <span>Tactics Execution</span>
+              {isAllTacticsDone && (
+                <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> All Done!
+                </span>
+              )}
+            </h2>
+            
+            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-2">
+              <label className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
+                <Checkbox 
+                  checked={tactics.snack} 
+                  onCheckedChange={(checked) => setTactics(p => ({...p, snack: checked as boolean}))} 
+                  className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
+                />
+                <span className={cn("text-base font-medium transition-colors", tactics.snack ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
+                  Ate pre-workout snack (Banana/Whey)
+                </span>
+              </label>
+
+              <label className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
+                <Checkbox 
+                  checked={tactics.workout} 
+                  onCheckedChange={(checked) => setTactics(p => ({...p, workout: checked as boolean}))} 
+                  className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
+                />
+                <span className={cn("text-base font-medium transition-colors", tactics.workout ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
+                  5 Compound Exercises Completed
+                </span>
+              </label>
+
+              <label className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
+                <Checkbox 
+                  checked={tactics.sleepTarget} 
+                  onCheckedChange={(checked) => setTactics(p => ({...p, sleepTarget: checked as boolean}))} 
+                  className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
+                />
+                <span className={cn("text-base font-medium transition-colors", tactics.sleepTarget ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
+                  Prepared for 9:00 PM Sleep Target
+                </span>
+              </label>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* Floating Action Button */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none">
+        <div className="max-w-2xl mx-auto flex justify-end pointer-events-auto">
+          <button className="flex items-center gap-2 bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] transition-all active:scale-95">
+            <Save className="w-5 h-5" />
+            Save Daily Log
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
