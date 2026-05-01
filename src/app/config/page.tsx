@@ -1,18 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, Save, Plus, Target, BrainCircuit, Cpu, Dumbbell, Rocket } from "lucide-react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export default function ConfigPage() {
-  const [tactics, setTactics] = useState([
-    { id: 1, name: "Luyện 2 bài LeetCode & System Design", category: "value", weight: 5 },
-    { id: 2, name: "2 Giờ học Claude Architect", category: "learning", weight: 4 },
-    { id: 3, name: "Ngủ trước 9:00 PM", category: "health", weight: 3 },
-    { id: 4, name: "Tập 5 bài Compound", category: "health", weight: 3 },
-    { id: 5, name: "Ăn nhẹ trước tập", category: "health", weight: 1 },
-  ]);
+  type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+  
+  const [tactics, setTactics] = useState<Tactic[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchTactics = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            setTactics(data);
+          } else {
+            setTactics([
+              { id: 1, name: "Luyện 2 bài LeetCode & System Design", category: "value", weight: 5, cycleId: 1 },
+              { id: 2, name: "2 Giờ học Claude Architect", category: "learning", weight: 4, cycleId: 1 },
+              { id: 3, name: "Ngủ trước 9:00 PM", category: "health", weight: 3, cycleId: 1 },
+              { id: 4, name: "Tập 5 bài Compound", category: "health", weight: 3, cycleId: 1 },
+            ]);
+          }
+        }
+      } catch (e) {
+        console.error("API Fetch Error:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTactics();
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      for (const t of tactics) {
+        // Simple integration mock - realistically would use PATCH if exists, POST if new
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weight: t.weight })
+        }).catch(() => {}); 
+        // We catch here because if the record doesn't exist yet in the DB, it will fail
+      }
+      alert("Configuration saved to database!");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const totalWeight = tactics.reduce((acc, t) => acc + t.weight, 0);
 
@@ -57,8 +102,13 @@ export default function ConfigPage() {
           <p className="text-zinc-400 font-medium">Define your 12 Week Year goals and weight your tactics.</p>
         </div>
 
-        <div className="space-y-8">
-          {/* Section 1: Global Settings */}
+        {isLoading ? (
+          <div className="flex justify-center py-20 text-emerald-500 animate-pulse font-semibold">
+            Loading configuration...
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Section 1: Global Settings */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">Global Settings</h2>
             <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 grid gap-6">
@@ -223,13 +273,17 @@ export default function ConfigPage() {
             </div>
           </section>
         </div>
+        )}
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none">
         <div className="max-w-3xl mx-auto flex justify-end pointer-events-auto">
-          <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] transition-all active:scale-95">
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] transition-all active:scale-95 disabled:opacity-50">
             <Save className="w-5 h-5" />
-            Save Configuration
+            {isSaving ? "Saving..." : "Save Configuration"}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
@@ -10,18 +10,39 @@ import { cn } from "@/lib/utils";
 type BlockStatus = "failed" | "partial" | "nailed";
 
 export default function DailyLogPage() {
-  // State
   const [sleep, setSleep] = useState([7]);
   const [energy, setEnergy] = useState([8]);
   const [strategicBlock, setStrategicBlock] = useState<BlockStatus>("failed");
   const [bufferBlock, setBufferBlock] = useState<BlockStatus>("failed");
-  const [tactics, setTactics] = useState({
-    snack: false,
-    workout: false,
-    sleepTarget: false,
-  });
+  
+  // Real data state
+  type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+  const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
+  const [tacticsState, setTacticsState] = useState<Record<number, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const isAllTacticsDone = Object.values(tactics).every(Boolean);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`);
+        if (res.ok) {
+          const data = await res.json();
+          setTacticsList(data);
+          const initialState: Record<number, boolean> = {};
+          data.forEach((t: Tactic) => { initialState[t.id] = false; });
+          setTacticsState(initialState);
+        }
+      } catch (e) {
+        console.error("Fetch tactics error:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const isAllTacticsDone = tacticsList.length > 0 && Object.values(tacticsState).every(Boolean);
 
   const cycleStatus = (current: BlockStatus): BlockStatus => {
     if (current === "failed") return "partial";
@@ -178,38 +199,21 @@ export default function DailyLogPage() {
             </h2>
             
             <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-2">
-              <label className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
-                <Checkbox 
-                  checked={tactics.snack} 
-                  onCheckedChange={(checked) => setTactics(p => ({...p, snack: checked as boolean}))} 
-                  className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
-                />
-                <span className={cn("text-base font-medium transition-colors", tactics.snack ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
-                  Ate pre-workout snack (Banana/Whey)
-                </span>
-              </label>
-
-              <label className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
-                <Checkbox 
-                  checked={tactics.workout} 
-                  onCheckedChange={(checked) => setTactics(p => ({...p, workout: checked as boolean}))} 
-                  className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
-                />
-                <span className={cn("text-base font-medium transition-colors", tactics.workout ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
-                  5 Compound Exercises Completed
-                </span>
-              </label>
-
-              <label className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
-                <Checkbox 
-                  checked={tactics.sleepTarget} 
-                  onCheckedChange={(checked) => setTactics(p => ({...p, sleepTarget: checked as boolean}))} 
-                  className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
-                />
-                <span className={cn("text-base font-medium transition-colors", tactics.sleepTarget ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
-                  Prepared for 9:00 PM Sleep Target
-                </span>
-              </label>
+              {tacticsList.map(tactic => (
+                <label key={tactic.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
+                  <Checkbox 
+                    checked={tacticsState[tactic.id] || false} 
+                    onCheckedChange={(checked) => setTacticsState(p => ({...p, [tactic.id]: checked as boolean}))} 
+                    className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
+                  />
+                  <span className={cn("text-base font-medium transition-colors", tacticsState[tactic.id] ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
+                    {tactic.name}
+                  </span>
+                </label>
+              ))}
+              {tacticsList.length === 0 && !isLoading && (
+                <div className="p-4 text-zinc-500 text-center">No tactics configured yet. Go to Config page to add some!</div>
+              )}
             </div>
           </section>
         </div>
@@ -218,9 +222,40 @@ export default function DailyLogPage() {
       {/* Floating Action Button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none">
         <div className="max-w-2xl mx-auto flex justify-end pointer-events-auto">
-          <button className="flex items-center gap-2 bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] transition-all active:scale-95">
+          <button 
+            onClick={async () => {
+              setIsSaving(true);
+              try {
+                const payload = {
+                  sleepHours: sleep[0],
+                  energyLevel: energy[0],
+                  strategicBlockStatus: strategicBlock,
+                  bufferBlockStatus: bufferBlock,
+                  cycleId: 1, // default cycle
+                  tactics: {
+                    create: Object.entries(tacticsState).map(([tId, isDone]) => ({
+                      tacticId: parseInt(tId),
+                      isCompleted: isDone
+                    }))
+                  }
+                };
+                await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                });
+                alert("Daily log saved successfully!");
+              } catch (e) {
+                console.error(e);
+                alert("Failed to save log.");
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+            disabled={isSaving}
+            className="flex items-center gap-2 bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] transition-all active:scale-95 disabled:opacity-50">
             <Save className="w-5 h-5" />
-            Save Daily Log
+            {isSaving ? "Saving..." : "Save Daily Log"}
           </button>
         </div>
       </div>
