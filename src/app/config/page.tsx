@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, Save, Plus, Target, BrainCircuit, Cpu, Dumbbell, Rocket } from "lucide-react";
 import Link from "next/link";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export default function ConfigPage() {
   const [tactics, setTactics] = useState([
@@ -140,35 +141,84 @@ export default function ConfigPage() {
           {/* Section 3: Dynamic Score Preview */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">Score Distribution</h2>
-            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6">
-              <div className="flex items-end gap-2 mb-6">
-                <span className="text-4xl font-bold text-emerald-400">{totalWeight}</span>
-                <span className="text-zinc-500 font-medium mb-1">Total Max Points</span>
+            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="flex items-end gap-2 mb-6">
+                  <span className="text-4xl font-bold text-emerald-400">{totalWeight}</span>
+                  <span className="text-zinc-500 font-medium mb-1">Total Max Points</span>
+                </div>
+                
+                <div className="space-y-4">
+                  {["internal", "learning", "health", "value"].map(cat => {
+                    const catWeight = tactics.filter(t => t.category === cat).reduce((acc, t) => acc + t.weight, 0);
+                    if (catWeight === 0) return null;
+                    const percentage = Math.round((catWeight / totalWeight) * 100);
+                    
+                    return (
+                      <div key={cat}>
+                        <div className="flex justify-between text-sm font-medium mb-2">
+                          <span className="capitalize text-zinc-300 flex items-center gap-2">
+                            {getCategoryIcon(cat)} {cat}
+                          </span>
+                          <span className="text-zinc-500">{percentage}% ({catWeight} pts)</span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${getCategoryColor(cat).split(' ')[0].replace('/10', '')}`} 
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              
-              <div className="space-y-4">
-                {["internal", "learning", "health", "value"].map(cat => {
-                  const catWeight = tactics.filter(t => t.category === cat).reduce((acc, t) => acc + t.weight, 0);
-                  if (catWeight === 0) return null;
-                  const percentage = Math.round((catWeight / totalWeight) * 100);
+
+              <div className="h-[250px] w-full flex items-center justify-center">
+                {(() => {
+                  const getHexColor = (cat: string) => {
+                    switch (cat) {
+                      case "internal": return "#a855f7"; // purple-500
+                      case "learning": return "#3b82f6"; // blue-500
+                      case "health": return "#22c55e"; // green-500
+                      case "value": return "#f97316"; // orange-500
+                      default: return "#71717a";
+                    }
+                  };
                   
+                  const pieData = ["internal", "learning", "health", "value"]
+                    .map(cat => ({
+                      name: cat.charAt(0).toUpperCase() + cat.slice(1),
+                      value: tactics.filter(t => t.category === cat).reduce((acc, t) => acc + t.weight, 0),
+                      color: getHexColor(cat)
+                    }))
+                    .filter(d => d.value > 0);
+
                   return (
-                    <div key={cat}>
-                      <div className="flex justify-between text-sm font-medium mb-2">
-                        <span className="capitalize text-zinc-300 flex items-center gap-2">
-                          {getCategoryIcon(cat)} {cat}
-                        </span>
-                        <span className="text-zinc-500">{percentage}% ({catWeight} pts)</span>
-                      </div>
-                      <div className="w-full bg-zinc-800 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${getCategoryColor(cat).split(' ')[0].replace('/10', '')}`} 
-                          style={{ width: `${percentage}%` }}
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={5}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }}
+                          itemStyle={{ color: '#fff' }}
                         />
-                      </div>
-                    </div>
+                      </PieChart>
+                    </ResponsiveContainer>
                   );
-                })}
+                })()}
               </div>
             </div>
           </section>
