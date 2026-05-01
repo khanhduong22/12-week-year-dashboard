@@ -1,7 +1,38 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit, Cpu, Dumbbell, Rocket } from "lucide-react";
 
-export function BscGrid() {
+interface BscGridProps {
+  tactics: any[];
+  logs: any[];
+}
+
+export function BscGrid({ tactics, logs }: BscGridProps) {
+  const totalDays = logs.length || 1;
+
+  const getCategoryStats = (category: string) => {
+    const categoryTactics = tactics.filter(t => t.category === category);
+    if (categoryTactics.length === 0) return { maxPoints: 0, earnedPoints: 0, percentage: 0 };
+
+    let maxPoints = 0;
+    let earnedPoints = 0;
+
+    categoryTactics.forEach(t => {
+      const completedCount = logs.filter(log => 
+        log.tactics?.some((lt: any) => lt.tacticId === t.id && lt.isCompleted)
+      ).length;
+      maxPoints += t.weight * totalDays;
+      earnedPoints += t.weight * completedCount;
+    });
+
+    const percentage = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;
+    return { maxPoints, earnedPoints, percentage };
+  };
+
+  const learning = getCategoryStats("learning");
+  const internal = getCategoryStats("internal");
+  const health = getCategoryStats("health");
+  const value = getCategoryStats("value");
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       {/* Learning */}
@@ -13,10 +44,10 @@ export function BscGrid() {
           <BrainCircuit className="h-4 w-4 text-blue-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">75%</div>
-          <p className="text-xs text-muted-foreground mt-1">Study guide progress</p>
+          <div className="text-2xl font-bold">{learning.percentage}%</div>
+          <p className="text-xs text-muted-foreground mt-1">Study progress</p>
           <div className="w-full bg-secondary h-2 mt-3 rounded-full overflow-hidden">
-            <div className="bg-blue-500 h-full w-[75%] rounded-full" />
+            <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${learning.percentage}%` }} />
           </div>
         </CardContent>
       </Card>
@@ -30,10 +61,10 @@ export function BscGrid() {
           <Cpu className="h-4 w-4 text-purple-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">4.5 hrs</div>
-          <p className="text-xs text-muted-foreground mt-1">Daily hours on Linkpul</p>
+          <div className="text-2xl font-bold">{internal.percentage}%</div>
+          <p className="text-xs text-muted-foreground mt-1">Process compliance</p>
           <div className="w-full bg-secondary h-2 mt-3 rounded-full overflow-hidden">
-            <div className="bg-purple-500 h-full w-[60%] rounded-full" />
+            <div className="bg-purple-500 h-full rounded-full transition-all duration-500" style={{ width: `${internal.percentage}%` }} />
           </div>
         </CardContent>
       </Card>
@@ -47,12 +78,10 @@ export function BscGrid() {
           <Dumbbell className="h-4 w-4 text-green-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold flex items-baseline gap-2">
-            76.4 <span className="text-sm font-normal text-muted-foreground">kg</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Muscle Mass: 56.3kg</p>
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-xs text-green-400">Visceral Fat: 9 → 8</span>
+          <div className="text-2xl font-bold">{health.percentage}%</div>
+          <p className="text-xs text-muted-foreground mt-1">Physical & Mental routines</p>
+          <div className="w-full bg-secondary h-2 mt-3 rounded-full overflow-hidden">
+            <div className="bg-green-500 h-full rounded-full transition-all duration-500" style={{ width: `${health.percentage}%` }} />
           </div>
         </CardContent>
       </Card>
@@ -66,13 +95,10 @@ export function BscGrid() {
           <Rocket className="h-4 w-4 text-orange-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">12</div>
-          <p className="text-xs text-muted-foreground mt-1">Features shipped</p>
-          <div className="mt-3 flex gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-2 flex-1 rounded-sm bg-orange-500" />
-            ))}
-            <div className="h-2 flex-1 rounded-sm bg-secondary" />
+          <div className="text-2xl font-bold">{value.percentage}%</div>
+          <p className="text-xs text-muted-foreground mt-1">Output value generation</p>
+          <div className="w-full bg-secondary h-2 mt-3 rounded-full overflow-hidden">
+            <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${value.percentage}%` }} />
           </div>
         </CardContent>
       </Card>

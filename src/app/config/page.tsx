@@ -11,6 +11,12 @@ export default function ConfigPage() {
   const [tactics, setTactics] = useState<Tactic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTacticName, setNewTacticName] = useState("");
+  const [newTacticCategory, setNewTacticCategory] = useState("value");
+  const [newTacticWeight, setNewTacticWeight] = useState(3);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     const fetchTactics = async () => {
@@ -42,21 +48,59 @@ export default function ConfigPage() {
     setIsSaving(true);
     try {
       for (const t of tactics) {
-        // Simple integration mock - realistically would use PATCH if exists, POST if new
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ weight: t.weight })
-        }).catch(() => {}); 
-        // We catch here because if the record doesn't exist yet in the DB, it will fail
+        if (t.id < 0) {
+          // New tactic added locally but not saved yet
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: t.name, category: t.category, weight: t.weight, cycleId: 1 })
+          });
+        } else {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weight: t.weight })
+          }).catch(() => {});
+        }
       }
       alert("Configuration saved to database!");
+      // Reload tactics to get real DB IDs
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`);
+      if (res.ok) setTactics(await res.json());
     } catch (e) {
       console.error(e);
       alert("Failed to save.");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAddTactic = () => {
+    if (!newTacticName.trim()) return;
+    const newTactic: Tactic = {
+      id: -Date.now(), // temporary negative ID
+      name: newTacticName,
+      category: newTacticCategory,
+      weight: newTacticWeight,
+      cycleId: 1
+    };
+    setTactics([...tactics, newTactic]);
+    setShowAddForm(false);
+    setNewTacticName("");
+    setNewTacticWeight(3);
+  };
+
+  const handleDeleteTactic = async (id: number) => {
+    if (id > 0) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${id}`, {
+          method: 'DELETE'
+        });
+      } catch (e) {
+        console.error("Failed to delete tactic", e);
+      }
+    }
+    setTactics(tactics.filter(t => t.id !== id));
   };
 
   const totalWeight = tactics.reduce((acc, t) => acc + t.weight, 0);
@@ -146,10 +190,52 @@ export default function ConfigPage() {
           <section className="space-y-4">
             <div className="flex justify-between items-center ml-1">
               <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Tactics Matrix</h2>
-              <button className="flex items-center gap-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors">
+              <button 
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="flex items-center gap-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors">
                 <Plus className="w-4 h-4" /> Add Tactic
               </button>
             </div>
+
+            {showAddForm && (
+              <div className="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-5 space-y-4">
+                <input 
+                  type="text" 
+                  placeholder="Tactic Name (e.g. 2 hours of Deep Work)" 
+                  value={newTacticName}
+                  onChange={(e) => setNewTacticName(e.target.value)}
+                  className="w-full bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                />
+                <div className="flex gap-4">
+                  <select 
+                    value={newTacticCategory}
+                    onChange={(e) => setNewTacticCategory(e.target.value)}
+                    className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                    <option value="internal">Internal Process</option>
+                    <option value="learning">Learning</option>
+                    <option value="health">Health</option>
+                    <option value="value">Value</option>
+                  </select>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-zinc-400">Weight:</span>
+                    <span className="text-xl font-bold text-white w-4 text-center">{newTacticWeight}</span>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="1"
+                  value={newTacticWeight}
+                  onChange={(e) => setNewTacticWeight(parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                />
+                <div className="flex justify-end gap-3 pt-2">
+                  <button onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white">Cancel</button>
+                  <button onClick={handleAddTactic} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-sm font-bold rounded-lg transition-colors">Add Tactic</button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               {tactics.map((t) => (
@@ -162,9 +248,14 @@ export default function ConfigPage() {
                         {t.category}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm text-zinc-400 font-medium">Weight</div>
-                      <div className="text-2xl font-bold text-white">{t.weight}</div>
+                    <div className="text-right flex-shrink-0 flex items-center gap-4">
+                      <div>
+                        <div className="text-sm text-zinc-400 font-medium">Weight</div>
+                        <div className="text-2xl font-bold text-white">{t.weight}</div>
+                      </div>
+                      <button onClick={() => handleDeleteTactic(t.id)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
                     </div>
                   </div>
                   
