@@ -3,14 +3,20 @@
 import { useState, useEffect } from "react";
 import { CountdownHeader } from "@/components/dashboard/CountdownHeader";
 import { BscGrid } from "@/components/dashboard/BscGrid";
-import { ScorecardChecklist, Tactic, LogTacticStatus } from "@/components/dashboard/ScorecardChecklist";
+import { ScorecardChecklist, Tactic } from "@/components/dashboard/ScorecardChecklist";
 import { EnergyChart } from "@/components/dashboard/EnergyChart";
 import Link from "next/link";
+export type DailyLog = {
+  id: number;
+  sleepHours: number;
+  energyLevel: number;
+  createdAt: string;
+  tactics: { tacticId: number; isCompleted: boolean }[];
+};
 
 export default function DashboardPage() {
   const [tactics, setTactics] = useState<Tactic[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [logs, setLogs] = useState<DailyLog[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -24,8 +30,6 @@ export default function DashboardPage() {
         if (logsRes.ok) setLogs(await logsRes.json());
       } catch (e) {
         console.error(e);
-      } finally {
-        setIsLoading(false);
       }
     };
     fetchData();
@@ -36,7 +40,7 @@ export default function DashboardPage() {
   const totalLogs = logs.length;
   const tacticProgress = tactics.map(t => {
     const completedCount = logs.filter(log => 
-      log.tactics?.some((lt: any) => lt.tacticId === t.id && lt.isCompleted)
+      log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted)
     ).length;
     return {
       tacticId: t.id,

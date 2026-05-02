@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit, Cpu, Dumbbell, Rocket } from "lucide-react";
+import type { DailyLog } from "@/app/page";
 
 interface BscGridProps {
-  tactics: any[];
-  logs: any[];
+  tactics: { id: number; name: string; category: string; weight: number }[];
+  logs: DailyLog[];
 }
 
 export function BscGrid({ tactics, logs }: BscGridProps) {
@@ -18,7 +19,7 @@ export function BscGrid({ tactics, logs }: BscGridProps) {
 
     categoryTactics.forEach(t => {
       const completedCount = logs.filter(log => 
-        log.tactics?.some((lt: any) => lt.tacticId === t.id && lt.isCompleted)
+        log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted)
       ).length;
       maxPoints += t.weight * totalDays;
       earnedPoints += t.weight * completedCount;

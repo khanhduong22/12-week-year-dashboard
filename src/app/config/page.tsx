@@ -16,7 +16,6 @@ export default function ConfigPage() {
   const [newTacticName, setNewTacticName] = useState("");
   const [newTacticCategory, setNewTacticCategory] = useState("value");
   const [newTacticWeight, setNewTacticWeight] = useState(3);
-  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     const fetchTactics = async () => {
