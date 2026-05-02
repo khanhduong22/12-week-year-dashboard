@@ -62,7 +62,10 @@ export function AiGoalPlanner() {
         },
         body: JSON.stringify({
           name: data.title,
-          startDate: new Date().toISOString()
+          startDate: new Date().toISOString(),
+          strategicBlockDesc: data.strategicBlockDesc,
+          bufferBlockDesc: data.bufferBlockDesc,
+          breakoutBlockDesc: data.breakoutBlockDesc
         })
       });
 

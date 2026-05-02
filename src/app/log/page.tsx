@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft } from "lucide-react";
+import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft, Coffee } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -14,8 +14,11 @@ export default function DailyLogPage() {
   const [energy, setEnergy] = useState([8]);
   const [strategicBlock, setStrategicBlock] = useState<BlockStatus>("failed");
   const [bufferBlock, setBufferBlock] = useState<BlockStatus>("failed");
+  const [breakoutBlock, setBreakoutBlock] = useState<BlockStatus>("failed");
   
   // Real data state
+  type CycleData = { strategicBlockDesc?: string; bufferBlockDesc?: string; breakoutBlockDesc?: string; };
+  const [cycleData, setCycleData] = useState<CycleData | null>(null);
   type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
   const [tacticsState, setTacticsState] = useState<Record<number, boolean>>({});
@@ -25,14 +28,23 @@ export default function DailyLogPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`);
-        if (res.ok) {
-          const data = await res.json();
+        const [tacticsRes, cycleRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/1`)
+        ]);
+        
+        if (tacticsRes.ok) {
+          const data = await tacticsRes.json();
           data.sort((a: Tactic, b: Tactic) => b.weight - a.weight);
           setTacticsList(data);
           const initialState: Record<number, boolean> = {};
           data.forEach((t: Tactic) => { initialState[t.id] = false; });
           setTacticsState(initialState);
+        }
+        
+        if (cycleRes.ok) {
+          const cycle = await cycleRes.json();
+          setCycleData(cycle);
         }
       } catch (e) {
         console.error("Fetch tactics error:", e);
@@ -145,7 +157,7 @@ export default function DailyLogPage() {
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">Time Blocks</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Strategic Block */}
               <button 
                 onClick={() => setStrategicBlock(cycleStatus(strategicBlock))}
@@ -163,7 +175,7 @@ export default function DailyLogPage() {
                   </span>
                 </div>
                 <h3 className="font-bold text-lg text-zinc-100 mb-1">Strategic Block</h3>
-                <p className="text-sm opacity-80">3h Uninterrupted (Linkpul / Claude)</p>
+                <p className="text-sm opacity-80">{cycleData?.strategicBlockDesc || "3h Uninterrupted Deep Work"}</p>
               </button>
 
               {/* Buffer Block */}
@@ -183,7 +195,27 @@ export default function DailyLogPage() {
                   </span>
                 </div>
                 <h3 className="font-bold text-lg text-zinc-100 mb-1">Buffer Block</h3>
-                <p className="text-sm opacity-80">1h Emails, Admin & Routing</p>
+                <p className="text-sm opacity-80">{cycleData?.bufferBlockDesc || "1h Emails & Routing"}</p>
+              </button>
+
+              {/* Breakout Block */}
+              <button 
+                onClick={() => setBreakoutBlock(cycleStatus(breakoutBlock))}
+                className={cn(
+                  "p-5 rounded-3xl border text-left transition-all duration-300 active:scale-[0.98]",
+                  getStatusColor(breakoutBlock)
+                )}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-2.5 bg-black/20 rounded-xl">
+                    <Coffee className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 bg-black/20 rounded-full">
+                    {getStatusText(breakoutBlock)}
+                  </span>
+                </div>
+                <h3 className="font-bold text-lg text-zinc-100 mb-1">Breakout Block</h3>
+                <p className="text-sm opacity-80">{cycleData?.breakoutBlockDesc || "3h Free Time to Recharge"}</p>
               </button>
             </div>
           </section>
@@ -232,6 +264,7 @@ export default function DailyLogPage() {
                   energyLevel: energy[0],
                   strategicBlockStatus: strategicBlock,
                   bufferBlockStatus: bufferBlock,
+                  breakoutBlockStatus: breakoutBlock,
                   cycleId: 1, // default cycle
                   tactics: {
                     create: Object.entries(tacticsState).map(([tId, isDone]) => ({

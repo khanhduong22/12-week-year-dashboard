@@ -11,6 +11,18 @@ const tacticSchema: Schema = {
       type: Type.STRING,
       description: "A cool, motivating title for the 12-week cycle based on the goals (e.g. 'Q4 - Mùa săn AI Architect', '12 Tuần Thổi Bùng Năng Lượng', 'The Coding Sprint')."
     },
+    strategicBlockDesc: {
+      type: Type.STRING,
+      description: "Proposed activity for the 3-hour Strategic Block (Deep Work) based on goals (e.g. '3h uninterrupted coding AI logic', '3h writing manuscript')."
+    },
+    bufferBlockDesc: {
+      type: Type.STRING,
+      description: "Proposed activity for the 1-hour Buffer Block (Admin/Routing) based on goals (e.g. '1h checking emails and Jira', '1h doing household chores and bills')."
+    },
+    breakoutBlockDesc: {
+      type: Type.STRING,
+      description: "Proposed activity for the 3-hour Breakout Block (Rest/Recharge) to prevent burnout (e.g. '3h playing Black Myth Wukong', '3h hiking with family')."
+    },
     tactics: {
       type: Type.ARRAY,
       description: "The list of 5-8 daily or weekly tactics to achieve the goals.",
@@ -35,7 +47,7 @@ const tacticSchema: Schema = {
       }
     }
   },
-  required: ["title", "tactics"]
+  required: ["title", "strategicBlockDesc", "bufferBlockDesc", "breakoutBlockDesc", "tactics"]
 };
 
 export async function generateTactics(goals: string[]) {
