@@ -5,27 +5,37 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 const ai = new GoogleGenAI({}); // Automatically picks up process.env.GEMINI_API_KEY
 
 const tacticSchema: Schema = {
-  type: Type.ARRAY,
-  description: "A list of actionable daily or weekly tactics derived from the user's goals. Generate 5-8 tactics total.",
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      name: {
-        type: Type.STRING,
-        description: "The name of the tactic. Must be actionable and concise. E.g., 'Read 10 pages of tech book', 'Run 5km', 'Review weekly metrics'."
-      },
-      category: {
-        type: Type.STRING,
-        description: "Category of the tactic. Choose the best fit.",
-        enum: ["internal", "learning", "health", "value"]
-      },
-      weight: {
-        type: Type.INTEGER,
-        description: "Importance weight of the tactic. 1 for minor habits, 2 for medium, 3 for high impact tasks."
-      }
+  type: Type.OBJECT,
+  properties: {
+    title: {
+      type: Type.STRING,
+      description: "A cool, motivating title for the 12-week cycle based on the goals (e.g. 'Q4 - Mùa săn AI Architect', '12 Tuần Thổi Bùng Năng Lượng', 'The Coding Sprint')."
     },
-    required: ["name", "category", "weight"]
-  }
+    tactics: {
+      type: Type.ARRAY,
+      description: "The list of 5-8 daily or weekly tactics to achieve the goals.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: {
+            type: Type.STRING,
+            description: "A specific, measurable daily or weekly action (e.g. 'Luyện 2 bài LeetCode', 'Chạy bộ 5km')."
+          },
+          category: {
+            type: Type.STRING,
+            description: "The category of the tactic mapping to Life Wheel domains.",
+            enum: ["Health & Fitness", "Career & Business", "Finances", "Relationships & Family", "Personal Growth", "Recreation & Fun", "Physical Environment", "Community & Contribution", "Spiritual & Faith"]
+          },
+          weight: {
+            type: Type.INTEGER,
+            description: "Importance weight of the tactic. 1 for minor habits, 2 for medium, 3 for high impact tasks."
+          }
+        },
+        required: ["name", "category", "weight"]
+      }
+    }
+  },
+  required: ["title", "tactics"]
 };
 
 export async function generateTactics(goals: string[]) {

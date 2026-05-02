@@ -29,7 +29,10 @@ export default function DashboardPage() {
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`)
         ]);
         
-        if (tacticsRes.ok) setTactics(await tacticsRes.json());
+        if (tacticsRes.ok) {
+          const tacticsData = await tacticsRes.json();
+          setTactics(tacticsData.sort((a: { weight: number }, b: { weight: number }) => b.weight - a.weight));
+        }
         if (logsRes.ok) setLogs(await logsRes.json());
         
         if (cyclesRes.ok) {

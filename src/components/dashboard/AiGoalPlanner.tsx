@@ -31,7 +31,7 @@ export function AiGoalPlanner() {
 
     try {
       // Call Server Action to generate tactics
-      const tactics = await generateTactics(goals);
+      const data = await generateTactics(goals);
       
       setIsGenerating(false);
       setIsSaving(true);
@@ -39,7 +39,7 @@ export function AiGoalPlanner() {
       // Save generated tactics to the backend API
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://12wy-api.khanhdp.com";
       
-      const savePromises = tactics.map(async (t: { name: string; category: string; weight: number }) => {
+      const savePromises = data.tactics.map(async (t: { name: string; category: string; weight: number }) => {
         return fetch(`${apiUrl}/tactics`, {
           method: 'POST',
           headers: {
@@ -54,7 +54,19 @@ export function AiGoalPlanner() {
         });
       });
 
-      await Promise.all(savePromises);
+      // Update the cycle with the new title and start date
+      const cyclePromise = fetch(`${apiUrl}/cycles/1`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.title,
+          startDate: new Date().toISOString()
+        })
+      });
+
+      await Promise.all([...savePromises, cyclePromise]);
       
       setIsSaving(false);
       setSuccess(true);

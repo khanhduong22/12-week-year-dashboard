@@ -28,6 +28,7 @@ export default function DailyLogPage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`);
         if (res.ok) {
           const data = await res.json();
+          data.sort((a: Tactic, b: Tactic) => b.weight - a.weight);
           setTacticsList(data);
           const initialState: Record<number, boolean> = {};
           data.forEach((t: Tactic) => { initialState[t.id] = false; });

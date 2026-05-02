@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, Save, Plus, Target, BrainCircuit, Cpu, Dumbbell, Rocket } from "lucide-react";
+import { ChevronLeft, Save, Plus, Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -14,7 +14,7 @@ export default function ConfigPage() {
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTacticName, setNewTacticName] = useState("");
-  const [newTacticCategory, setNewTacticCategory] = useState("value");
+  const [newTacticCategory, setNewTacticCategory] = useState("Career & Business");
   const [newTacticWeight, setNewTacticWeight] = useState(3);
 
   useEffect(() => {
@@ -24,14 +24,9 @@ export default function ConfigPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) {
-            setTactics(data);
+            setTactics(data.sort((a: Tactic, b: Tactic) => b.weight - a.weight));
           } else {
-            setTactics([
-              { id: 1, name: "Luyện 2 bài LeetCode & System Design", category: "value", weight: 5, cycleId: 1 },
-              { id: 2, name: "2 Giờ học Claude Architect", category: "learning", weight: 4, cycleId: 1 },
-              { id: 3, name: "Ngủ trước 9:00 PM", category: "health", weight: 3, cycleId: 1 },
-              { id: 4, name: "Tập 5 bài Compound", category: "health", weight: 3, cycleId: 1 },
-            ]);
+            setTactics([]);
           }
         }
       } catch (e) {
@@ -106,20 +101,30 @@ export default function ConfigPage() {
 
   const getCategoryColor = (cat: string) => {
     switch (cat) {
-      case "internal": return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-      case "learning": return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-      case "health": return "bg-green-500/10 text-green-400 border-green-500/20";
-      case "value": return "bg-orange-500/10 text-orange-400 border-orange-500/20";
+      case "Health & Fitness": return "bg-red-500/10 text-red-400 border-red-500/20";
+      case "Career & Business": return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+      case "Finances": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+      case "Relationships & Family": return "bg-pink-500/10 text-pink-400 border-pink-500/20";
+      case "Personal Growth": return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+      case "Recreation & Fun": return "bg-orange-500/10 text-orange-400 border-orange-500/20";
+      case "Physical Environment": return "bg-teal-500/10 text-teal-400 border-teal-500/20";
+      case "Community & Contribution": return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+      case "Spiritual & Faith": return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
       default: return "bg-zinc-800 text-zinc-400 border-zinc-700";
     }
   };
 
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
-      case "internal": return <Cpu className="w-4 h-4" />;
-      case "learning": return <BrainCircuit className="w-4 h-4" />;
-      case "health": return <Dumbbell className="w-4 h-4" />;
-      case "value": return <Rocket className="w-4 h-4" />;
+      case "Health & Fitness": return <Heart className="w-4 h-4" />;
+      case "Career & Business": return <Briefcase className="w-4 h-4" />;
+      case "Finances": return <Coins className="w-4 h-4" />;
+      case "Relationships & Family": return <Users className="w-4 h-4" />;
+      case "Personal Growth": return <BookOpen className="w-4 h-4" />;
+      case "Recreation & Fun": return <Gamepad2 className="w-4 h-4" />;
+      case "Physical Environment": return <Home className="w-4 h-4" />;
+      case "Community & Contribution": return <Globe className="w-4 h-4" />;
+      case "Spiritual & Faith": return <Sparkles className="w-4 h-4" />;
       default: return <Target className="w-4 h-4" />;
     }
   };
@@ -210,10 +215,15 @@ export default function ConfigPage() {
                     value={newTacticCategory}
                     onChange={(e) => setNewTacticCategory(e.target.value)}
                     className="flex-1 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                    <option value="internal">Internal Process</option>
-                    <option value="learning">Learning</option>
-                    <option value="health">Health</option>
-                    <option value="value">Value</option>
+                    <option value="Health & Fitness">Health & Fitness</option>
+                    <option value="Career & Business">Career & Business</option>
+                    <option value="Finances">Finances</option>
+                    <option value="Relationships & Family">Relationships & Family</option>
+                    <option value="Personal Growth">Personal Growth</option>
+                    <option value="Recreation & Fun">Recreation & Fun</option>
+                    <option value="Physical Environment">Physical Environment</option>
+                    <option value="Community & Contribution">Community & Contribution</option>
+                    <option value="Spiritual & Faith">Spiritual & Faith</option>
                   </select>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-zinc-400">Weight:</span>
@@ -289,7 +299,7 @@ export default function ConfigPage() {
                 </div>
                 
                 <div className="space-y-4">
-                  {["internal", "learning", "health", "value"].map(cat => {
+                  {["Health & Fitness", "Career & Business", "Finances", "Relationships & Family", "Personal Growth", "Recreation & Fun", "Physical Environment", "Community & Contribution", "Spiritual & Faith"].map(cat => {
                     const catWeight = tactics.filter(t => t.category === cat).reduce((acc, t) => acc + t.weight, 0);
                     if (catWeight === 0) return null;
                     const percentage = Math.round((catWeight / totalWeight) * 100);
@@ -318,15 +328,20 @@ export default function ConfigPage() {
                 {(() => {
                   const getHexColor = (cat: string) => {
                     switch (cat) {
-                      case "internal": return "#a855f7"; // purple-500
-                      case "learning": return "#3b82f6"; // blue-500
-                      case "health": return "#22c55e"; // green-500
-                      case "value": return "#f97316"; // orange-500
+                      case "Health & Fitness": return "#ef4444"; // red-500
+                      case "Career & Business": return "#3b82f6"; // blue-500
+                      case "Finances": return "#10b981"; // emerald-500
+                      case "Relationships & Family": return "#ec4899"; // pink-500
+                      case "Personal Growth": return "#a855f7"; // purple-500
+                      case "Recreation & Fun": return "#f97316"; // orange-500
+                      case "Physical Environment": return "#14b8a6"; // teal-500
+                      case "Community & Contribution": return "#eab308"; // yellow-500
+                      case "Spiritual & Faith": return "#6366f1"; // indigo-500
                       default: return "#71717a";
                     }
                   };
                   
-                  const pieData = ["internal", "learning", "health", "value"]
+                  const pieData = ["Health & Fitness", "Career & Business", "Finances", "Relationships & Family", "Personal Growth", "Recreation & Fun", "Physical Environment", "Community & Contribution", "Spiritual & Faith"]
                     .map(cat => ({
                       name: cat.charAt(0).toUpperCase() + cat.slice(1),
                       value: tactics.filter(t => t.category === cat).reduce((acc, t) => acc + t.weight, 0),
