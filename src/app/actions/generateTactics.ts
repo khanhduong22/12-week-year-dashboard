@@ -41,9 +41,13 @@ const tacticSchema: Schema = {
           weight: {
             type: Type.INTEGER,
             description: "Importance weight of the tactic. 1 for minor habits, 2 for medium, 3 for high impact tasks."
+          },
+          targetCount: {
+            type: Type.INTEGER,
+            description: "Number of times this tactic should be executed per week (1-7). Example: 'hằng ngày' = 7, '3 buổi/tuần' = 3, 'sáng Chủ Nhật' = 1."
           }
         },
-        required: ["name", "category", "weight"]
+        required: ["name", "category", "weight", "targetCount"]
       }
     }
   },
@@ -65,6 +69,10 @@ Your task is to break down these goals into actionable, specific daily or weekly
 Create a comprehensive list of 5-8 tactics that, if executed consistently, will guarantee the achievement of these goals.
 Make the tactics clear, measurable, and action-oriented.
 Categorize them correctly and assign a weight based on their impact (3 is highest impact).
+CRITICAL: For each tactic, explicitly determine its \`targetCount\` (number of days per week it should be done, between 1 and 7).
+- If it implies "every day", set targetCount to 7.
+- If it says "3 times a week", set targetCount to 3.
+- If it's a one-off weekly task ("Review progress every Sunday" or "hằng tuần"), set targetCount to 1.
 `;
 
   try {

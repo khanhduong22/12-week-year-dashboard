@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info } from "lucide-react";
 
-export type Tactic = { id: number; name: string; category: string; weight: number };
+export type Tactic = { id: number; name: string; category: string; weight: number; targetCount?: number };
 export type TacticProgress = { tacticId: number; completed: number; total: number };
 
 interface ScorecardChecklistProps {
@@ -38,14 +38,14 @@ export function ScorecardChecklist({ tactics, progress }: ScorecardChecklistProp
           tactics.map((tactic) => {
             const p = progress.find(p => p.tacticId === tactic.id);
             const completed = p?.completed || 0;
-            const total = p?.total || 1;
-            const percentage = Math.round((completed / total) * 100);
+            const target = tactic.targetCount || 7;
+            const percentage = Math.min(Math.round((completed / target) * 100), 100);
             
             return (
               <div key={tactic.id} className="space-y-2">
                 <div className="flex justify-between text-sm font-medium">
                   <span className="text-zinc-200">{tactic.name}</span>
-                  <span className="text-emerald-400">{completed}/{total} days</span>
+                  <span className="text-emerald-400">{completed}/{target} days</span>
                 </div>
                 <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
                   <div 

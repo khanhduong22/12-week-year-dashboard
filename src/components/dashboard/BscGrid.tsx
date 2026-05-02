@@ -3,13 +3,14 @@ import { Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe
 import type { DailyLog } from "@/app/page";
 
 interface BscGridProps {
-  tactics: { id: number; name: string; category: string; weight: number }[];
+  tactics: { id: number; name: string; category: string; weight: number; targetCount?: number }[];
   logs: DailyLog[];
 }
 
 export function BscGrid({ tactics, logs }: BscGridProps) {
-  const totalDays = logs.length || 1;
-
+  // Sort logs to group by weeks chronologically
+  const sortedLogs = [...logs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  
   // Extract unique active categories
   const activeCategories = Array.from(new Set(tactics.map(t => t.category)));
 
@@ -20,12 +21,38 @@ export function BscGrid({ tactics, logs }: BscGridProps) {
     let maxPoints = 0;
     let earnedPoints = 0;
 
+    // Group logs into weeks (0-indexed) based on the first log date
+    const weeks: Record<number, DailyLog[]> = {};
+    if (sortedLogs.length > 0) {
+      const firstDate = new Date(sortedLogs[0].createdAt).getTime();
+      sortedLogs.forEach(log => {
+        const current = new Date(log.createdAt).getTime();
+        const weekIndex = Math.floor((current - firstDate) / (1000 * 60 * 60 * 24 * 7));
+        if (!weeks[weekIndex]) weeks[weekIndex] = [];
+        weeks[weekIndex].push(log);
+      });
+    } else {
+      weeks[0] = []; // Empty week
+    }
+
+    const totalWeeks = Object.keys(weeks).length;
+
     categoryTactics.forEach(t => {
-      const completedCount = logs.filter(log => 
-        log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted)
-      ).length;
-      maxPoints += t.weight * totalDays;
-      earnedPoints += t.weight * completedCount;
+      const target = t.targetCount || 7;
+      
+      // Max points is the weight * number of active weeks
+      maxPoints += t.weight * totalWeeks;
+
+      // Earned points calculated per week (strict 12WY scoring)
+      Object.values(weeks).forEach(weekLogs => {
+        const completedInWeek = weekLogs.filter(log => 
+          log.tactics?.some(lt => lt.tacticId === t.id && lt.isCompleted)
+        ).length;
+        
+        if (completedInWeek >= target) {
+          earnedPoints += t.weight;
+        }
+      });
     });
 
     const percentage = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;

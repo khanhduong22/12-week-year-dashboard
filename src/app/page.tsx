@@ -62,6 +62,8 @@ export default function DashboardPage() {
   // Calculate Weekly Scorecard (Lead Indicators)
   // For each tactic, calculate how many times it was completed vs total logs
   const totalLogs = logs.length;
+  const totalWeeks = Math.max(1, Math.ceil(totalLogs / 7));
+
   const tacticProgress = tactics.map(t => {
     const completedCount = logs.filter(log => 
       log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted)
@@ -69,7 +71,7 @@ export default function DashboardPage() {
     return {
       tacticId: t.id,
       completed: completedCount,
-      total: totalLogs || 1, // Avoid division by zero
+      total: t.targetCount || 7, // Provide target count for completeness
     };
   });
 
@@ -80,7 +82,10 @@ export default function DashboardPage() {
   if (totalLogs > 0) {
     tactics.forEach(t => {
       const progress = tacticProgress.find(p => p.tacticId === t.id);
-      const completionRate = (progress?.completed || 0) / totalLogs;
+      const targetPerWeek = t.targetCount || 7;
+      const totalTarget = targetPerWeek * totalWeeks;
+      const completionRate = Math.min(1, (progress?.completed || 0) / totalTarget);
+      
       totalPossibleWeight += t.weight;
       earnedWeight += t.weight * completionRate;
     });
