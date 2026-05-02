@@ -5,6 +5,7 @@ import { CountdownHeader } from "@/components/dashboard/CountdownHeader";
 import { BscGrid } from "@/components/dashboard/BscGrid";
 import { ScorecardChecklist, Tactic } from "@/components/dashboard/ScorecardChecklist";
 import { EnergyChart } from "@/components/dashboard/EnergyChart";
+import { OnboardingTour } from "@/components/dashboard/OnboardingTour";
 import Link from "next/link";
 export type DailyLog = {
   id: number;
@@ -92,18 +93,27 @@ export default function DashboardPage() {
       }`}
     >
       <main className="max-w-6xl mx-auto p-6 pt-12 md:p-12 text-foreground">
-        <div className="mb-8 space-y-2 flex justify-between items-start">
+        <div className="mb-8 space-y-4 flex flex-col md:flex-row md:justify-between md:items-start">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">12 Week Year Architect</h1>
             <p className="text-muted-foreground">
               Monitor your system, achieve your goals, and master your routines.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/config" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('start-tour'))}
+              className="text-zinc-400 hover:text-white px-3 py-2 text-sm transition-colors border border-transparent hover:border-zinc-800 rounded-full"
+            >
+              Take a Tour
+            </button>
+            <Link id="tour-about" href="/about" className="text-zinc-400 hover:text-white px-3 py-2 text-sm transition-colors border border-transparent hover:border-zinc-800 rounded-full">
+              About
+            </Link>
+            <Link id="tour-config" href="/config" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10">
               Config
             </Link>
-            <Link href="/log" className="bg-zinc-100 hover:bg-white text-zinc-900 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm">
+            <Link id="tour-log" href="/log" className="bg-zinc-100 hover:bg-white text-zinc-900 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm">
               Daily Log
             </Link>
           </div>
@@ -118,15 +128,19 @@ export default function DashboardPage() {
 
         <CountdownHeader currentWeek={currentWeek} totalWeeks={12} />
 
-        <BscGrid tactics={tactics} logs={logs} />
+        <div id="tour-bsc">
+          <BscGrid tactics={tactics} logs={logs} />
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div id="tour-scorecard" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <ScorecardChecklist 
             tactics={tactics} 
             progress={tacticProgress} 
           />
           <EnergyChart logs={logs} />
         </div>
+        
+        <OnboardingTour />
       </main>
     </div>
   );
