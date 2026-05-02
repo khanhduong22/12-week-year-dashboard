@@ -17,9 +17,9 @@ export default function DailyLogPage() {
   const [breakoutBlock, setBreakoutBlock] = useState<BlockStatus>("failed");
   
   // Real data state
-  type CycleData = { strategicBlockDesc?: string; bufferBlockDesc?: string; breakoutBlockDesc?: string; };
-  const [cycleData, setCycleData] = useState<CycleData | null>(null);
   type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+  type CycleData = { id: number; strategicBlockDesc?: string; bufferBlockDesc?: string; breakoutBlockDesc?: string; tactics: Tactic[] };
+  const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
   const [tacticsState, setTacticsState] = useState<Record<number, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -28,26 +28,23 @@ export default function DailyLogPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tacticsRes, cycleRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/1`)
-        ]);
-        
-        if (tacticsRes.ok) {
-          const data = await tacticsRes.json();
-          data.sort((a: Tactic, b: Tactic) => b.weight - a.weight);
-          setTacticsList(data);
-          const initialState: Record<number, boolean> = {};
-          data.forEach((t: Tactic) => { initialState[t.id] = false; });
-          setTacticsState(initialState);
-        }
-        
+        const cycleRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`);
         if (cycleRes.ok) {
-          const cycle = await cycleRes.json();
-          setCycleData(cycle);
+          const cycle: CycleData = await cycleRes.json();
+          if (cycle) {
+            setCycleData(cycle);
+            
+            // Sort tactics by weight
+            const sortedTactics = (cycle.tactics || []).sort((a, b) => b.weight - a.weight);
+            setTacticsList(sortedTactics);
+            
+            const initialState: Record<number, boolean> = {};
+            sortedTactics.forEach((t: Tactic) => { initialState[t.id] = false; });
+            setTacticsState(initialState);
+          }
         }
       } catch (e) {
-        console.error("Fetch tactics error:", e);
+        console.error("Fetch data error:", e);
       } finally {
         setIsLoading(false);
       }
@@ -101,8 +98,18 @@ export default function DailyLogPage() {
           <p className="text-zinc-400 font-medium">Monday, Oct 24 • Week 3, Day 1</p>
         </div>
 
-        <div className="space-y-8">
-          {/* Section 1: The Engine (Bio-Metrics) */}
+        {!isLoading && !cycleData ? (
+          <div className="text-center py-20 bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
+            <Target className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-zinc-300 mb-2">No Active Cycle</h3>
+            <p className="text-zinc-500 mb-6">You don&apos;t have an active 12-Week plan running right now. Please activate a plan first.</p>
+            <Link href="/config" className="bg-emerald-500 text-zinc-950 px-6 py-3 rounded-full font-bold hover:bg-emerald-400 transition-colors inline-block">
+              Go to Plan Management
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Section 1: The Engine (Bio-Metrics) */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">The Engine</h2>
             
@@ -249,50 +256,53 @@ export default function DailyLogPage() {
               )}
             </div>
           </section>
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Floating Action Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none">
-        <div className="max-w-2xl mx-auto flex justify-end pointer-events-auto">
-          <button 
-            onClick={async () => {
-              setIsSaving(true);
-              try {
-                const payload = {
-                  sleepHours: sleep[0],
-                  energyLevel: energy[0],
-                  strategicBlockStatus: strategicBlock,
-                  bufferBlockStatus: bufferBlock,
-                  breakoutBlockStatus: breakoutBlock,
-                  cycleId: 1, // default cycle
-                  tactics: {
-                    create: Object.entries(tacticsState).map(([tId, isDone]) => ({
-                      tacticId: parseInt(tId),
-                      isCompleted: isDone
-                    }))
-                  }
-                };
-                await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(payload)
-                });
-                alert("Daily log saved successfully!");
-              } catch (e) {
-                console.error(e);
-                alert("Failed to save log.");
-              } finally {
-                setIsSaving(false);
-              }
-            }}
-            disabled={isSaving}
-            className="flex items-center gap-2 bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] transition-all active:scale-95 disabled:opacity-50">
-            <Save className="w-5 h-5" />
-            {isSaving ? "Saving..." : "Save Daily Log"}
-          </button>
+      {!isLoading && cycleData && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none">
+          <div className="max-w-2xl mx-auto flex justify-end pointer-events-auto">
+            <button 
+              onClick={async () => {
+                setIsSaving(true);
+                try {
+                  const payload = {
+                    sleepHours: sleep[0],
+                    energyLevel: energy[0],
+                    strategicBlockStatus: strategicBlock,
+                    bufferBlockStatus: bufferBlock,
+                    breakoutBlockStatus: breakoutBlock,
+                    cycleId: cycleData?.id || 1,
+                    tactics: {
+                      create: Object.entries(tacticsState).map(([tId, isDone]) => ({
+                        tacticId: parseInt(tId),
+                        isCompleted: isDone
+                      }))
+                    }
+                  };
+                  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  });
+                  alert("Daily log saved successfully!");
+                } catch (e) {
+                  console.error(e);
+                  alert("Failed to save log.");
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-4 rounded-full font-bold shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] transition-all active:scale-95 disabled:opacity-50">
+              <Save className="w-5 h-5" />
+              {isSaving ? "Saving..." : "Save Daily Log"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -36,40 +36,37 @@ export function AiGoalPlanner() {
       setIsGenerating(false);
       setIsSaving(true);
 
-      // Save generated tactics to the backend API
+      // Save generated tactics as a new draft cycle to the backend API
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://12wy-api.khanhdp.com";
       
-      const savePromises = data.tactics.map(async (t: { name: string; category: string; weight: number }) => {
-        return fetch(`${apiUrl}/tactics`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+      const payload = {
+        name: data.title,
+        startDate: new Date().toISOString(),
+        endDate: new Date(new Date().getTime() + 12 * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        isActive: false, // Save as Draft!
+        strategicBlockDesc: data.strategicBlockDesc,
+        bufferBlockDesc: data.bufferBlockDesc,
+        breakoutBlockDesc: data.breakoutBlockDesc,
+        tactics: {
+          create: data.tactics.map((t: { name: string; category: string; weight: number }) => ({
             name: t.name,
             category: t.category,
-            weight: t.weight,
-            cycleId: 1 // Default cycle hardcoded for MVP
-          })
-        });
-      });
+            weight: t.weight
+          }))
+        }
+      };
 
-      // Update the cycle with the new title and start date
-      const cyclePromise = fetch(`${apiUrl}/cycles/1`, {
-        method: 'PATCH',
+      const cycleResponse = await fetch(`${apiUrl}/cycles`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: data.title,
-          startDate: new Date().toISOString(),
-          strategicBlockDesc: data.strategicBlockDesc,
-          bufferBlockDesc: data.bufferBlockDesc,
-          breakoutBlockDesc: data.breakoutBlockDesc
-        })
+        body: JSON.stringify(payload)
       });
 
-      await Promise.all([...savePromises, cyclePromise]);
+      if (!cycleResponse.ok) {
+        throw new Error("Failed to save the generated plan.");
+      }
       
       setIsSaving(false);
       setSuccess(true);
