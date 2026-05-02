@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft, Coffee } from "lucide-react";
+import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft, Coffee, Info } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -162,7 +162,21 @@ export default function DailyLogPage() {
 
           {/* Section 2: Time Blocks */}
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1">Time Blocks</h2>
+            <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider ml-1 flex items-center gap-2">
+              Time Blocks
+              <div className="group relative flex items-center">
+                <Info className="w-4 h-4 text-zinc-400 hover:text-white cursor-help transition-colors" />
+                <div className="absolute left-0 bottom-full mb-2 w-[340px] md:w-[400px] p-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-zinc-300 normal-case tracking-normal">
+                  <p className="font-bold text-white mb-2 text-sm">Quy tắc Time Blocks (12WY):</p>
+                  <ul className="space-y-3 list-none">
+                    <li><strong className="text-indigo-400 flex items-center gap-1"><Target className="w-3 h-3"/> Strategic (1 lần/tuần - 3 tiếng):</strong> Deep work không gián đoạn để làm task quan trọng nhất giúp thay đổi cuộc chơi.</li>
+                    <li><strong className="text-blue-400 flex items-center gap-1"><Mail className="w-3 h-3"/> Buffer (1-2 lần/ngày - 30-60p):</strong> Gom các việc lắt nhắt (check email, admin) lại làm một lần để tránh bị phân tâm trong ngày.</li>
+                    <li><strong className="text-orange-400 flex items-center gap-1"><Coffee className="w-3 h-3"/> Breakout (1 lần/tuần - 3 tiếng):</strong> Hoàn toàn nghỉ ngơi, giải trí để tránh burnout.</li>
+                  </ul>
+                  <p className="mt-3 pt-2 border-t border-zinc-700/50 text-zinc-400 italic">Lưu ý: Không bắt buộc phải làm cả 3 mỗi ngày. Hãy đánh dấu nếu hôm nay bạn có thực hiện, để trống (hoặc failed) nếu không.</p>
+                </div>
+              </div>
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Strategic Block */}

@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Info } from "lucide-react";
 
 export type Tactic = { id: number; name: string; category: string; weight: number };
 export type TacticProgress = { tacticId: number; completed: number; total: number };
@@ -10,10 +11,21 @@ interface ScorecardChecklistProps {
 
 export function ScorecardChecklist({ tactics, progress }: ScorecardChecklistProps) {
   return (
-    <Card className="bg-background/50 backdrop-blur-sm border-white/10 shadow-lg">
+    <Card className="bg-background/50 backdrop-blur-sm border-white/10 shadow-lg relative overflow-visible z-10">
       <CardHeader>
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           Weekly Scorecard Progress
+          <div className="group relative flex items-center">
+            <Info className="w-4 h-4 text-zinc-400 hover:text-white cursor-help transition-colors" />
+            <div className="absolute left-0 bottom-full mb-2 w-[320px] p-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-zinc-300 normal-case tracking-normal">
+              <p className="font-bold text-white mb-2 text-sm">Chấm điểm 12WY (Strict Scoring):</p>
+              <p className="mb-2">12 Week Year <strong>không có điểm vớt (partial credit)</strong>. Bạn chỉ có Đạt (100%) hoặc Thất bại (0%).</p>
+              <ul className="space-y-1 list-disc pl-4 text-zinc-400">
+                <li>Thanh Progress Bar giúp bạn tracking tiến độ hàng ngày (ví dụ: đã đi bộ 3/7 ngày).</li>
+                <li>Đến cuối tuần, nếu thanh Progress không đạt mức tối đa, Tactic đó bị tính là 0 điểm. Cố lên nhé!</li>
+              </ul>
+            </div>
+          </div>
           <span className="text-xs font-normal text-muted-foreground ml-auto bg-secondary px-2 py-1 rounded-md">
             Lead Indicators
           </span>

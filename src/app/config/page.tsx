@@ -24,6 +24,7 @@ export default function ConfigPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "drafts">("active");
+  const [selectedDraft, setSelectedDraft] = useState<Cycle | null>(null);
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTacticName, setNewTacticName] = useState("");
@@ -564,13 +565,21 @@ export default function ConfigPage() {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => handleActivateCycle(cycle.id)}
-                      className="w-full relative z-10 flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 py-4 rounded-xl font-bold transition-all active:scale-[0.98]"
-                    >
-                      <Play className="w-5 h-5" />
-                      Activate This Plan
-                    </button>
+                    <div className="flex gap-3 relative z-10">
+                      <button 
+                        onClick={() => setSelectedDraft(cycle)}
+                        className="flex-1 bg-zinc-800 text-white hover:bg-zinc-700 py-4 rounded-xl font-bold transition-all active:scale-[0.98]"
+                      >
+                        View Details
+                      </button>
+                      <button 
+                        onClick={() => handleActivateCycle(cycle.id)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 py-4 rounded-xl font-bold transition-all active:scale-[0.98]"
+                      >
+                        <Play className="w-5 h-5" />
+                        Activate
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -590,6 +599,88 @@ export default function ConfigPage() {
               <Save className="w-5 h-5" />
               {isSaving ? "Saving..." : "Save Active Config"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Draft Details Modal */}
+      {selectedDraft && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-zinc-950 border border-zinc-800 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 md:p-8 shadow-2xl relative">
+            <button 
+              onClick={() => setSelectedDraft(null)}
+              className="absolute top-6 right-6 p-2 bg-zinc-900 rounded-full text-zinc-400 hover:text-white transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+            
+            <span className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 block">Draft Plan Details</span>
+            <h2 className="text-3xl font-bold text-white mb-6 pr-12">{selectedDraft.name}</h2>
+            
+            <div className="bg-black/30 rounded-2xl p-5 mb-8 space-y-4 border border-white/5">
+              <div className="flex gap-4">
+                <Target className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5"/>
+                <div>
+                  <h4 className="font-semibold text-zinc-300 mb-1">Strategic Block</h4>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{selectedDraft.strategicBlockDesc || "No description provided."}</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Briefcase className="w-5 h-5 text-blue-400 shrink-0 mt-0.5"/>
+                <div>
+                  <h4 className="font-semibold text-zinc-300 mb-1">Buffer Block</h4>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{selectedDraft.bufferBlockDesc || "No description provided."}</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Gamepad2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5"/>
+                <div>
+                  <h4 className="font-semibold text-zinc-300 mb-1">Breakout Block</h4>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{selectedDraft.breakoutBlockDesc || "No description provided."}</p>
+                </div>
+              </div>
+            </div>
+
+            <h3 className="text-lg font-bold text-zinc-300 mb-4 flex items-center justify-between">
+              <span>All Tactics ({selectedDraft.tactics.length})</span>
+              <span className="text-sm font-medium text-zinc-500">Max Points: {selectedDraft.tactics.reduce((a, t) => a + t.weight, 0)}</span>
+            </h3>
+            
+            <div className="space-y-3 mb-8">
+              {selectedDraft.tactics.map(t => (
+                <div key={t.id} className="bg-zinc-900/50 rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-semibold text-zinc-200">{t.name}</h4>
+                    <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider ${getCategoryColor(t.category)}`}>
+                      {getCategoryIcon(t.category)}
+                      {t.category}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-center">
+                    <div className="text-xs text-zinc-500 font-medium mb-1">Weight</div>
+                    <div className="text-xl font-bold text-white bg-zinc-800 w-10 h-10 rounded-lg flex items-center justify-center">{t.weight}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-4 sticky bottom-0 pt-4 pb-2 bg-zinc-950">
+              <button 
+                onClick={() => setSelectedDraft(null)}
+                className="flex-1 px-6 py-4 rounded-xl font-bold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedDraft(null);
+                  handleActivateCycle(selectedDraft.id);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 px-6 py-4 rounded-xl font-bold transition-transform active:scale-[0.98]"
+              >
+                <Play className="w-5 h-5" /> Activate This Plan
+              </button>
+            </div>
           </div>
         </div>
       )}

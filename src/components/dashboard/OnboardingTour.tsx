@@ -32,14 +32,14 @@ export function OnboardingTour() {
       target: "#tour-scorecard",
       placement: "right",
       title: "The Weekly Scorecard",
-      content: "Your execution is scored here automatically. Keep it above 85% to ensure you're on track to hit your goals. If it drops, the system will warn you.",
+      content: "Your execution is scored here automatically. Note: 12-Week Year has strict scoring! There is no partial credit. You either hit 100% of your weekly target or you get 0 points for that tactic.",
       skipBeacon: true,
     },
     {
       target: "#tour-bsc",
       placement: "top",
       title: "The BSC Grid",
-      content: "A visual heat map showing exactly which tactics you hit on which days. Green is good! Spot your weak areas easily.",
+      content: "A visual heat map showing exactly which tactics you hit on which days. The progress bars help you track your daily effort towards your weekly goals.",
       skipBeacon: true,
     },
     {
