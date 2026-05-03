@@ -23,22 +23,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tacticsRes, logsRes, cyclesRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`),
+        const [logsRes, cyclesRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`)
         ]);
         
-        if (tacticsRes.ok) {
-          const tacticsData = await tacticsRes.json();
-          setTactics(tacticsData.sort((a: { weight: number }, b: { weight: number }) => b.weight - a.weight));
-        }
         if (logsRes.ok) setLogs(await logsRes.json());
         
         if (cyclesRes.ok) {
           const cycles = await cyclesRes.json();
           const activeCycle = cycles.find((c: { isActive: boolean }) => c.isActive) || cycles[0];
           if (activeCycle) {
+            setTactics(activeCycle.tactics.sort((a: { weight: number }, b: { weight: number }) => b.weight - a.weight));
             const startDate = new Date(activeCycle.startDate);
             const today = new Date();
             const diffTime = today.getTime() - startDate.getTime();
