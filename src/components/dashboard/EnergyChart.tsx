@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
-import type { DailyLog } from "@/app/page";
+import type { DailyLog } from "@/app/dashboard/page";
 
 interface EnergyChartProps {
   logs: DailyLog[];

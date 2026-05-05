@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe, Sparkles } from "lucide-react";
-import type { DailyLog } from "@/app/page";
+import type { DailyLog } from "@/app/dashboard/page";
 
 interface BscGridProps {
   tactics: { id: number; name: string; category: string; weight: number; targetCount?: number }[];

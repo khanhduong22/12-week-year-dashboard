@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 12wy_dashboard
+    environment:
+      - NEXT_PUBLIC_API_URL=https://12wy-api.khanhdp.com
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=https://12weeks.khanhdp.com
+    networks:
+      - ops_bridge
+      - default
+    restart: always
+
+networks:
+  ops_bridge:
+    external: true

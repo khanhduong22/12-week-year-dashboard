@@ -1,225 +1,120 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { CountdownHeader } from "@/components/dashboard/CountdownHeader";
-import { BscGrid } from "@/components/dashboard/BscGrid";
-import {
-  ScorecardChecklist,
-  Tactic,
-} from "@/components/dashboard/ScorecardChecklist";
-import { EnergyChart } from "@/components/dashboard/EnergyChart";
-import { OnboardingTour } from "@/components/dashboard/OnboardingTour";
+import { ArrowRight, Target, Clock, BarChart3, CalendarDays, Sparkles, Heart } from "lucide-react";
 import Link from "next/link";
-export type DailyLog = {
-  id: number;
-  sleepHours: number;
-  energyLevel: number;
-  createdAt: string;
-  tactics: { tacticId: number; isCompleted: boolean }[];
-};
+import { AiGoalPlanner } from "@/components/dashboard/AiGoalPlanner";
 
-export default function DashboardPage() {
-  const [tactics, setTactics] = useState<Tactic[]>([]);
-  const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [currentWeek, setCurrentWeek] = useState(1);
-  const [currentDay, setCurrentDay] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [activeCycle, setActiveCycle] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [logsRes, cyclesRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`),
-        ]);
-
-        if (logsRes.ok) setLogs(await logsRes.json());
-
-        if (cyclesRes.ok) {
-          const cycles = await cyclesRes.json();
-          const activeCycle =
-            cycles.find((c: { isActive: boolean }) => c.isActive) || cycles[0];
-          if (activeCycle) {
-            setTactics(
-              activeCycle.tactics.sort(
-                (a: { weight: number }, b: { weight: number }) =>
-                  b.weight - a.weight,
-              ),
-            );
-            const startDate = new Date(activeCycle.startDate);
-            const today = new Date();
-            const normStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
-            const normToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-            
-            const diffTime = normToday - normStart;
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-            // If before start date, it's week 1.
-            let week = Math.floor(diffDays / 7) + 1;
-            let day = (diffDays % 7) + 1;
-            
-            if (diffDays < 0) {
-              week = 1;
-              day = 1;
-            } else if (week > 12) {
-              week = 12;
-              day = 7;
-            }
-
-            setCurrentWeek(week);
-            setCurrentDay(day);
-            setActiveCycle(activeCycle);
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // Calculate Weekly Scorecard (Lead Indicators)
-  // Filter logs for the CURRENT week only
-  const currentWeekLogs = logs.filter(log => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(activeCycle as any)) return false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const startDate = new Date((activeCycle as any).startDate);
-    const normStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const logDate = new Date((log as any).date || log.createdAt);
-    const normLog = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
-    
-    if (normLog < normStart) return false; // Ignore logs from before the cycle started
-    
-    const diffDays = Math.floor((normLog - normStart) / (1000 * 60 * 60 * 24));
-    const logWeek = Math.floor(diffDays / 7) + 1;
-    
-    return logWeek === currentWeek;
-  });
-
-  const tacticProgress = tactics.map((t) => {
-    const completedCount = currentWeekLogs.filter((log) =>
-      log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted),
-    ).length;
-    return {
-      tacticId: t.id,
-      completed: completedCount,
-      total: t.targetCount || 7, // Provide target count for completeness
-    };
-  });
-
-  // Calculate total score based on weights
-  let totalPossibleWeight = 0;
-  let earnedWeight = 0;
-
-  if (currentWeekLogs.length > 0 || tactics.length > 0) {
-    tactics.forEach((t) => {
-      const progress = tacticProgress.find((p) => p.tacticId === t.id);
-      const targetPerWeek = t.targetCount || 7;
-      const completionRate = Math.min(
-        1,
-        (progress?.completed || 0) / targetPerWeek,
-      );
-
-      totalPossibleWeight += t.weight;
-      earnedWeight += t.weight * completionRate;
-    });
-  }
-
-  const score =
-    totalPossibleWeight > 0 ? (earnedWeight / totalPossibleWeight) * 100 : 100;
-  const isWarning = score < 85 && currentWeekLogs.length > 0;
-
+export default function AboutPage() {
   return (
-    <div
-      className={`min-h-screen transition-colors duration-700 ${
-        isWarning ? "bg-red-950/20" : "bg-zinc-950"
-      }`}
-    >
-      <main className="max-w-6xl mx-auto p-6 pt-12 md:p-12 text-foreground">
-        <div className="mb-8 space-y-4 flex flex-col md:flex-row md:justify-between md:items-start">
+    <div className="min-h-screen bg-black text-zinc-100 p-8 pb-24 md:p-12 lg:p-20 font-sans selection:bg-orange-500/30">
+      <div className="max-w-4xl mx-auto">
+        <header className="mb-16">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+            The <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">12-Week Year</span> Framework
+          </h1>
+          <p className="text-xl text-zinc-400 leading-relaxed">
+            Forget annualized thinking. A year is no longer 12 months—it is 12 weeks.
+          </p>
+        </header>
+
+        <section className="space-y-16">
+          {/* Theory Section */}
+          <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-8 md:p-10">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
+              <Target className="w-6 h-6 mr-3 text-orange-500" />
+              Core Concept
+            </h2>
+            <div className="prose prose-invert max-w-none text-zinc-300 leading-loose">
+              <p>
+                Most people set annual goals in January and wait until November to hustle. 
+                The 12-Week Year shortens your execution cycle. You don&apos;t have time to slack off when your &quot;year&quot; ends in 12 weeks.
+              </p>
+              <p className="mt-4">
+                <strong>Vision without execution is hallucination.</strong> This framework forces you to break down your high-level vision into 
+                specific, measurable daily or weekly actions (Tactics) and tracks your execution relentlessly.
+              </p>
+            </div>
+          </div>
+
+          {/* Philosophy Section */}
+          <div className="bg-gradient-to-br from-indigo-950/30 to-purple-900/20 border border-indigo-500/20 rounded-2xl p-8 md:p-10">
+            <h2 className="text-2xl font-bold mb-6 flex items-center text-indigo-400">
+              <Sparkles className="w-6 h-6 mr-3" />
+              The One Thing vs. Wheel of Life
+            </h2>
+            <div className="prose prose-invert max-w-none text-zinc-300 leading-loose">
+              <p>
+                A common trap is trying to perfectly balance all 7 areas of the <strong>Wheel of Life</strong> simultaneously. This leads to burnout and mediocre results across the board. The 12-Week Year solves this through <strong>Dynamic Balance</strong>.
+              </p>
+              <div className="grid md:grid-cols-2 gap-6 mt-6 mb-6">
+                <div className="bg-black/40 p-5 rounded-xl border border-white/5">
+                  <h4 className="text-orange-400 font-bold mb-2 flex items-center">
+                    <Target className="w-4 h-4 mr-2" /> Breakthrough Mode
+                  </h4>
+                  <p className="text-sm leading-relaxed">
+                    Pick <strong>1 or 2 areas</strong> (e.g., Career & Finance) to be your <em>&quot;One Thing&quot;</em> for the next 12 weeks. Dedicate 80% of your focus here to achieve exponential growth.
+                  </p>
+                </div>
+                <div className="bg-black/40 p-5 rounded-xl border border-white/5">
+                  <h4 className="text-emerald-400 font-bold mb-2 flex items-center">
+                    <Heart className="w-4 h-4 mr-2" /> Maintenance Mode
+                  </h4>
+                  <p className="text-sm leading-relaxed">
+                    For the remaining areas (e.g., Health, Relationships), set <strong>Minimum Viable Habits</strong>. You aren&apos;t trying to run a marathon, you just need 3 days of gym to maintain shape.
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-400 italic">
+                At the end of the 12 weeks, rotate your focus. Over the course of 4 cycles (1 actual year), you will have leveled up every area of your Wheel of Life without burning out.
+              </p>
+            </div>
+          </div>
+
+          {/* Practical Application */}
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">
-              12 Week Year Architect
-            </h1>
-            <p className="text-muted-foreground">
-              Monitor your system, achieve your goals, and master your routines.
-            </p>
+            <h2 className="text-3xl font-bold mb-8">How to apply it here</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Step 1 */}
+              <div className="bg-black border border-zinc-800 p-6 rounded-xl hover:border-zinc-700 transition-colors">
+                <Clock className="w-8 h-8 text-orange-400 mb-4" />
+                <h3 className="text-xl font-medium mb-2">1. Define Tactics</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  Go to <strong>Config</strong>. Add your daily/weekly habits. Assign higher weights to the most critical tasks that move the needle.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="bg-black border border-zinc-800 p-6 rounded-xl hover:border-zinc-700 transition-colors">
+                <CalendarDays className="w-8 h-8 text-orange-400 mb-4" />
+                <h3 className="text-xl font-medium mb-2">2. Daily Execution</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  Execution happens daily. Use the <strong>Daily Log</strong> to track which tactics you completed today. Don&apos;t worry about the results yet, just execute the plan.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-black border border-zinc-800 p-6 rounded-xl hover:border-zinc-700 transition-colors">
+                <BarChart3 className="w-8 h-8 text-orange-400 mb-4" />
+                <h3 className="text-xl font-medium mb-2">3. Weekly Scorecard</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  The dashboard calculates your execution score. <strong>Aim for 85%+</strong>. If you hit 85% execution consistently, you will achieve your goals.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent("start-tour"))
-              }
-              className="text-zinc-400 hover:text-white px-3 py-2 text-sm transition-colors border border-transparent hover:border-zinc-800 rounded-full"
-            >
-              Take a Tour
-            </button>
-            <Link
-              id="tour-about"
-              href="/about"
-              className="text-zinc-400 hover:text-white px-3 py-2 text-sm transition-colors border border-transparent hover:border-zinc-800 rounded-full"
-            >
-              About
-            </Link>
-            <Link
-              id="tour-config"
-              href="/config"
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10"
-            >
-              Config
-            </Link>
-            <Link
-              id="tour-history"
-              href="/history"
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10"
-            >
-              History
-            </Link>
-            <Link
-              id="tour-log"
-              href="/log"
-              className="bg-zinc-100 hover:bg-white text-zinc-900 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm"
-            >
-              Daily Log
-            </Link>
-          </div>
-        </div>
 
-        {isWarning && (
-          <div className="mb-6 p-4 rounded-lg bg-red-900/30 border border-red-500/30 text-red-200 text-sm flex items-center">
-            <span className="font-semibold mr-2">Warning:</span>
-            Your Weekly Scorecard is below 85% ({Math.round(score)}%). You need
-            to hit the gas!
-          </div>
-        )}
+          {/* AI Goal Planner Section */}
+          <AiGoalPlanner />
 
-        <CountdownHeader currentWeek={currentWeek} totalWeeks={12} currentDay={currentDay} />
+        </section>
 
-        <div id="tour-bsc">
-          {activeCycle && (
-            <BscGrid 
-              tactics={tactics} 
-              logs={logs} 
-              currentWeek={currentWeek} 
-              startDate={activeCycle.startDate} 
-            />
-          )}
-        </div>
-
-        <div
-          id="tour-scorecard"
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-        >
-          <ScorecardChecklist tactics={tactics} progress={tacticProgress} />
-          <EnergyChart logs={logs} />
-        </div>
-
-        <OnboardingTour />
-      </main>
+        <footer className="mt-20 pt-8 border-t border-zinc-800 flex justify-between items-center">
+          <Link href="/dashboard" className="text-zinc-400 hover:text-white transition-colors text-sm flex items-center">
+            Go to Dashboard &rarr;
+          </Link>
+          <Link href="/config" className="bg-white text-black px-6 py-3 rounded-full font-bold hover:bg-zinc-200 transition-colors flex items-center">
+            Start Configuring <ArrowRight className="w-4 h-4 ml-2" />
+          </Link>
+        </footer>
+      </div>
     </div>
   );
 }
