@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const [tactics, setTactics] = useState<Tactic[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [currentWeek, setCurrentWeek] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [activeCycle, setActiveCycle] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,15 +48,19 @@ export default function DashboardPage() {
             );
             const startDate = new Date(activeCycle.startDate);
             const today = new Date();
-            const diffTime = today.getTime() - startDate.getTime();
+            const normStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+            const normToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+            
+            const diffTime = normToday - normStart;
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
             // If before start date, it's week 1.
-            let week = Math.ceil((diffDays + 1) / 7);
+            let week = Math.floor(diffDays / 7) + 1;
             if (week < 1) week = 1;
             if (week > 12) week = 12;
 
             setCurrentWeek(week);
+            setActiveCycle(activeCycle);
           }
         }
       } catch (e) {
@@ -65,12 +71,28 @@ export default function DashboardPage() {
   }, []);
 
   // Calculate Weekly Scorecard (Lead Indicators)
-  // For each tactic, calculate how many times it was completed vs total logs
-  const totalLogs = logs.length;
-  const totalWeeks = Math.max(1, Math.ceil(totalLogs / 7));
+  // Filter logs for the CURRENT week only
+  const currentWeekLogs = logs.filter(log => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(activeCycle as any)) return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const startDate = new Date((activeCycle as any).startDate);
+    const normStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const logDate = new Date((log as any).date || log.createdAt);
+    const normLog = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
+    
+    if (normLog < normStart) return false; // Ignore logs from before the cycle started
+    
+    const diffDays = Math.floor((normLog - normStart) / (1000 * 60 * 60 * 24));
+    const logWeek = Math.floor(diffDays / 7) + 1;
+    
+    return logWeek === currentWeek;
+  });
 
   const tacticProgress = tactics.map((t) => {
-    const completedCount = logs.filter((log) =>
+    const completedCount = currentWeekLogs.filter((log) =>
       log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted),
     ).length;
     return {
@@ -84,14 +106,13 @@ export default function DashboardPage() {
   let totalPossibleWeight = 0;
   let earnedWeight = 0;
 
-  if (totalLogs > 0) {
+  if (currentWeekLogs.length > 0 || tactics.length > 0) {
     tactics.forEach((t) => {
       const progress = tacticProgress.find((p) => p.tacticId === t.id);
       const targetPerWeek = t.targetCount || 7;
-      const totalTarget = targetPerWeek * totalWeeks;
       const completionRate = Math.min(
         1,
-        (progress?.completed || 0) / totalTarget,
+        (progress?.completed || 0) / targetPerWeek,
       );
 
       totalPossibleWeight += t.weight;
@@ -101,7 +122,7 @@ export default function DashboardPage() {
 
   const score =
     totalPossibleWeight > 0 ? (earnedWeight / totalPossibleWeight) * 100 : 100;
-  const isWarning = score < 85 && totalLogs > 0;
+  const isWarning = score < 85 && currentWeekLogs.length > 0;
 
   return (
     <div
@@ -141,6 +162,13 @@ export default function DashboardPage() {
               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10"
             >
               Config
+            </Link>
+            <Link
+              id="tour-history"
+              href="/history"
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10"
+            >
+              History
             </Link>
             <Link
               id="tour-log"
