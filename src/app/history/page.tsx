@@ -1,0 +1,269 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Moon, Zap, Target, Mail, Coffee, CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+type BlockStatus = "failed" | "partial" | "nailed";
+type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+type DailyLog = {
+  id: number;
+  date: string;
+  sleepHours: number;
+  energyLevel: number;
+  strategicBlockStatus: BlockStatus;
+  bufferBlockStatus: BlockStatus;
+  breakoutBlockStatus: BlockStatus;
+  tactics: { tacticId: number; isCompleted: boolean }[];
+};
+
+export default function HistoryPage() {
+  const [logs, setLogs] = useState<DailyLog[]>([]);
+  const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [cycleRes, logsRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`)
+        ]);
+        
+        if (cycleRes.ok) {
+          const cycle = await cycleRes.json();
+          if (cycle?.tactics) {
+            setTacticsList(cycle.tactics.sort((a: Tactic, b: Tactic) => b.weight - a.weight));
+          }
+        }
+        if (logsRes.ok) {
+          setLogs(await logsRes.json());
+        }
+      } catch (e) {
+        console.error("Fetch data error:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
+  const getLogForDate = (date: Date) => {
+    return logs.find(log => {
+      const logDate = new Date(log.date);
+      return isSameDay(logDate, date);
+    });
+  };
+
+  const currentLog = getLogForDate(selectedDate);
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    const days = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 1; i <= totalDays; i++) days.push(new Date(year, month, i));
+    return days;
+  };
+
+  const calendarDays = getDaysInMonth(currentMonth);
+
+  const changeMonth = (offset: number) => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
+  };
+
+  const getStatusColor = (status: BlockStatus) => {
+    if (status === "nailed") return "bg-green-500/20 text-green-400 border-green-500/30";
+    if (status === "partial") return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+    return "bg-zinc-800/50 text-zinc-500 border-white/5";
+  };
+
+  const getStatusText = (status: BlockStatus) => {
+    if (status === "nailed") return "Nailed It!";
+    if (status === "partial") return "Partial";
+    return "Failed / Skipped";
+  };
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-24 font-sans selection:bg-zinc-800">
+      <main className="max-w-5xl mx-auto px-4 pt-8">
+        {/* Navigation & Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
+            <ChevronLeft className="w-6 h-6 text-zinc-400" />
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight">Execution History</h1>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          {/* Left Column: Calendar */}
+          <div className="md:col-span-7">
+            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-6">
+              {/* Calendar Header */}
+              <div className="flex items-center justify-between mb-6">
+                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+                  <ChevronLeft className="w-5 h-5 text-zinc-400" />
+                </button>
+                <h2 className="text-xl font-bold text-white">
+                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
+                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+                  <ChevronRight className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+
+              {/* Days of Week */}
+              <div className="grid grid-cols-7 mb-2">
+                {dayNames.map(day => (
+                  <div key={day} className="text-center text-xs font-bold text-zinc-500 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((date, index) => {
+                  if (!date) {
+                    return <div key={`empty-${index}`} className="aspect-square" />;
+                  }
+                  
+                  const isSelected = isSameDay(selectedDate, date);
+                  const isToday = isSameDay(new Date(), date);
+                  const hasLog = !!getLogForDate(date);
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedDate(date)}
+                      className={cn(
+                        "aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all",
+                        isSelected 
+                          ? "bg-emerald-500 text-zinc-950 scale-105 shadow-lg shadow-emerald-500/20" 
+                          : isToday 
+                            ? "bg-zinc-800 border-2 border-emerald-500/30 text-emerald-400 hover:bg-zinc-800" 
+                            : "bg-transparent hover:bg-zinc-800 text-zinc-300"
+                      )}
+                    >
+                      <span className={cn("text-sm font-bold", isSelected ? "text-zinc-900" : "")}>
+                        {date.getDate()}
+                      </span>
+                      {hasLog && (
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full absolute bottom-2",
+                          isSelected ? "bg-zinc-900" : "bg-emerald-500"
+                        )} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Daily Details */}
+          <div className="md:col-span-5">
+            <h3 className="text-xl font-bold text-white mb-6">
+              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h3>
+
+            {isLoading ? (
+              <div className="flex justify-center p-12">
+                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : !currentLog ? (
+              <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-3xl p-10 text-center">
+                <Target className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                <p className="text-zinc-500 font-medium">No execution log found for this date.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Bio-Metrics */}
+                <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Bio-Metrics</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-500/10 rounded-xl">
+                        <Moon className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <span className="font-medium text-sm">Sleep</span>
+                    </div>
+                    <span className="text-lg font-bold text-indigo-400">{currentLog.sleepHours}<span className="text-xs text-zinc-500 ml-1">hrs</span></span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-yellow-500/10 rounded-xl">
+                        <Zap className="w-4 h-4 text-yellow-400" />
+                      </div>
+                      <span className="font-medium text-sm">Energy</span>
+                    </div>
+                    <span className="text-lg font-bold text-emerald-400">{currentLog.energyLevel}<span className="text-xs text-zinc-500 ml-1">/10</span></span>
+                  </div>
+                </div>
+
+                {/* Time Blocks */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Time Blocks</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className={cn("p-3 rounded-2xl border flex flex-col items-center text-center", getStatusColor(currentLog.strategicBlockStatus))}>
+                      <Target className="w-5 h-5 mb-2 opacity-80" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">{getStatusText(currentLog.strategicBlockStatus)}</span>
+                    </div>
+                    <div className={cn("p-3 rounded-2xl border flex flex-col items-center text-center", getStatusColor(currentLog.bufferBlockStatus))}>
+                      <Mail className="w-5 h-5 mb-2 opacity-80" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">{getStatusText(currentLog.bufferBlockStatus)}</span>
+                    </div>
+                    <div className={cn("p-3 rounded-2xl border flex flex-col items-center text-center", getStatusColor(currentLog.breakoutBlockStatus))}>
+                      <Coffee className="w-5 h-5 mb-2 opacity-80" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">{getStatusText(currentLog.breakoutBlockStatus)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tactics */}
+                <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-2">
+                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-3 mt-3 mb-2">Tactics</h4>
+                  {tacticsList.map(tactic => {
+                    const logTactic = currentLog.tactics?.find(lt => lt.tacticId === tactic.id);
+                    const isCompleted = logTactic?.isCompleted || false;
+                    
+                    return (
+                      <div key={tactic.id} className="flex items-center gap-3 p-3 group">
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-zinc-600 shrink-0" />
+                        )}
+                        <span className={cn("text-sm font-medium transition-colors", isCompleted ? "text-zinc-500 line-through" : "text-zinc-200")}>
+                          {tactic.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {tacticsList.length === 0 && (
+                    <div className="p-4 text-center text-zinc-500 text-sm">No tactics configured.</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

@@ -117,6 +117,9 @@ export default function DashboardPage() {
             <Link id="tour-config" href="/config" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10">
               Config
             </Link>
+            <Link id="tour-history" href="/history" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm border border-white/10">
+              History
+            </Link>
             <Link id="tour-log" href="/log" className="bg-zinc-100 hover:bg-white text-zinc-900 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm">
               Daily Log
             </Link>
