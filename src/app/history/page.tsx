@@ -107,7 +107,7 @@ export default function HistoryPage() {
   const cycleStartDate = activeCycle?.startDate ? new Date(activeCycle.startDate) : null;
   const cycleEndDate = activeCycle?.endDate ? new Date(activeCycle.endDate) : null;
   
-  const getCycleMarker = (date: Date) => {
+  const getCycleMarker = (date: Date): { type: 'start' | 'end' | 'week', label: string, weekNum?: number } | null => {
     if (!cycleStartDate) return null;
     
     // Normalize times for accurate day comparison
@@ -130,7 +130,7 @@ export default function HistoryPage() {
       const diffDays = Math.floor((normDate - normStart) / (1000 * 60 * 60 * 24));
       if (diffDays % 7 === 0) {
         const weekNum = (diffDays / 7) + 1;
-        return { type: 'week', label: `W${weekNum}` };
+        return { type: 'week', label: `W${weekNum}`, weekNum };
       }
     }
     
@@ -202,10 +202,12 @@ export default function HistoryPage() {
                       {/* Optional Marker for Start/End/Week */}
                       {marker && (
                         <div className={cn(
-                          "absolute top-1 text-[8px] font-bold px-1 rounded-sm uppercase tracking-tighter",
-                          marker.type === 'start' ? "bg-indigo-500 text-white" :
-                          marker.type === 'end' ? "bg-rose-500 text-white" :
-                          "text-zinc-500"
+                          "absolute top-1 text-[8px] font-bold px-1 rounded-sm uppercase tracking-tighter text-white",
+                          marker.type === 'start' ? "bg-indigo-500" :
+                          marker.type === 'end' ? "bg-red-500" :
+                          marker.weekNum && marker.weekNum <= 4 ? "bg-indigo-500" :
+                          marker.weekNum && marker.weekNum <= 8 ? "bg-yellow-500" :
+                          "bg-red-500"
                         )}>
                           {marker.label}
                         </div>
