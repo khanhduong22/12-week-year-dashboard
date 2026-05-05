@@ -22,6 +22,8 @@ export default function HistoryPage() {
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  type Cycle = { startDate: string; endDate?: string; tactics?: Tactic[] };
+  const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
   
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -36,6 +38,7 @@ export default function HistoryPage() {
         
         if (cycleRes.ok) {
           const cycle = await cycleRes.json();
+          setActiveCycle(cycle);
           if (cycle?.tactics) {
             setTacticsList(cycle.tactics.sort((a: Tactic, b: Tactic) => b.weight - a.weight));
           }
@@ -73,8 +76,9 @@ export default function HistoryPage() {
     const firstDay = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
     
+    const emptyDays = firstDay === 0 ? 6 : firstDay - 1;
     const days = [];
-    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 0; i < emptyDays; i++) days.push(null);
     for (let i = 1; i <= totalDays; i++) days.push(new Date(year, month, i));
     return days;
   };
@@ -97,7 +101,41 @@ export default function HistoryPage() {
     return "Failed / Skipped";
   };
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  // Helper to determine cycle dates
+  const cycleStartDate = activeCycle?.startDate ? new Date(activeCycle.startDate) : null;
+  const cycleEndDate = activeCycle?.endDate ? new Date(activeCycle.endDate) : null;
+  
+  const getCycleMarker = (date: Date) => {
+    if (!cycleStartDate) return null;
+    
+    // Normalize times for accurate day comparison
+    const normDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const normStart = new Date(cycleStartDate.getFullYear(), cycleStartDate.getMonth(), cycleStartDate.getDate()).getTime();
+    
+    let normEnd = -1;
+    if (cycleEndDate) {
+      normEnd = new Date(cycleEndDate.getFullYear(), cycleEndDate.getMonth(), cycleEndDate.getDate()).getTime();
+    } else {
+      // If no end date, calculate 12 weeks (84 days - 1) from start
+      normEnd = normStart + (83 * 24 * 60 * 60 * 1000);
+    }
+
+    if (normDate === normStart) return { type: 'start', label: 'START' };
+    if (normDate === normEnd) return { type: 'end', label: 'END' };
+    
+    // Check if it's the start of a new week within the cycle
+    if (normDate > normStart && normDate <= normEnd) {
+      const diffDays = Math.floor((normDate - normStart) / (1000 * 60 * 60 * 24));
+      if (diffDays % 7 === 0) {
+        const weekNum = (diffDays / 7) + 1;
+        return { type: 'week', label: `W${weekNum}` };
+      }
+    }
+    
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-24 font-sans selection:bg-zinc-800">
@@ -146,21 +184,34 @@ export default function HistoryPage() {
                   const isSelected = isSameDay(selectedDate, date);
                   const isToday = isSameDay(new Date(), date);
                   const hasLog = !!getLogForDate(date);
+                  const marker = getCycleMarker(date);
                   
                   return (
                     <button
                       key={index}
                       onClick={() => setSelectedDate(date)}
                       className={cn(
-                        "aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all",
+                        "aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all border",
                         isSelected 
-                          ? "bg-emerald-500 text-zinc-950 scale-105 shadow-lg shadow-emerald-500/20" 
+                          ? "bg-emerald-500 text-zinc-950 scale-105 shadow-lg shadow-emerald-500/20 border-emerald-500" 
                           : isToday 
-                            ? "bg-zinc-800 border-2 border-emerald-500/30 text-emerald-400 hover:bg-zinc-800" 
-                            : "bg-transparent hover:bg-zinc-800 text-zinc-300"
+                            ? "bg-zinc-800 border-emerald-500/50 text-emerald-400 hover:bg-zinc-800" 
+                            : "bg-zinc-900/50 border-white/5 hover:bg-zinc-800 text-zinc-300"
                       )}
                     >
-                      <span className={cn("text-sm font-bold", isSelected ? "text-zinc-900" : "")}>
+                      {/* Optional Marker for Start/End/Week */}
+                      {marker && (
+                        <div className={cn(
+                          "absolute top-1 text-[8px] font-bold px-1 rounded-sm uppercase tracking-tighter",
+                          marker.type === 'start' ? "bg-indigo-500 text-white" :
+                          marker.type === 'end' ? "bg-rose-500 text-white" :
+                          "text-zinc-500"
+                        )}>
+                          {marker.label}
+                        </div>
+                      )}
+                      
+                      <span className={cn("text-sm font-bold z-10", isSelected ? "text-zinc-900" : "")}>
                         {date.getDate()}
                       </span>
                       {hasLog && (
