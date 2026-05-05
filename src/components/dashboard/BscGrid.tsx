@@ -5,12 +5,11 @@ import type { DailyLog } from "@/app/page";
 interface BscGridProps {
   tactics: { id: number; name: string; category: string; weight: number; targetCount?: number }[];
   logs: DailyLog[];
+  currentWeek: number;
+  startDate: string;
 }
 
-export function BscGrid({ tactics, logs }: BscGridProps) {
-  // Sort logs to group by weeks chronologically
-  const sortedLogs = [...logs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  
+export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps) {
   // Extract unique active categories
   const activeCategories = Array.from(new Set(tactics.map(t => t.category)));
 
@@ -21,21 +20,28 @@ export function BscGrid({ tactics, logs }: BscGridProps) {
     let maxPoints = 0;
     let earnedPoints = 0;
 
-    // Group logs into weeks (0-indexed) based on the first log date
-    const weeks: Record<number, DailyLog[]> = {};
-    if (sortedLogs.length > 0) {
-      const firstDate = new Date(sortedLogs[0].createdAt).getTime();
-      sortedLogs.forEach(log => {
-        const current = new Date(log.createdAt).getTime();
-        const weekIndex = Math.floor((current - firstDate) / (1000 * 60 * 60 * 24 * 7));
-        if (!weeks[weekIndex]) weeks[weekIndex] = [];
-        weeks[weekIndex].push(log);
-      });
-    } else {
-      weeks[0] = []; // Empty week
-    }
+    const totalWeeks = currentWeek;
 
-    const totalWeeks = Object.keys(weeks).length;
+    // Group logs into weeks (1-indexed) based on startDate
+    const weeks: Record<number, DailyLog[]> = {};
+    for (let i = 1; i <= currentWeek; i++) weeks[i] = [];
+
+    const start = new Date(startDate);
+    const normStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+
+    logs.forEach(log => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const logDate = new Date((log as any).date || log.createdAt);
+      const normLog = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
+      
+      if (normLog >= normStart) {
+        const diffDays = Math.floor((normLog - normStart) / (1000 * 60 * 60 * 24));
+        const week = Math.floor(diffDays / 7) + 1;
+        if (week >= 1 && week <= currentWeek) {
+          weeks[week].push(log);
+        }
+      }
+    });
 
     categoryTactics.forEach(t => {
       const target = t.targetCount || 7;

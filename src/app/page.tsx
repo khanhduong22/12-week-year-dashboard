@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [tactics, setTactics] = useState<Tactic[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [currentWeek, setCurrentWeek] = useState(1);
+  const [currentDay, setCurrentDay] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [activeCycle, setActiveCycle] = useState<any>(null);
 
@@ -56,10 +57,18 @@ export default function DashboardPage() {
 
             // If before start date, it's week 1.
             let week = Math.floor(diffDays / 7) + 1;
-            if (week < 1) week = 1;
-            if (week > 12) week = 12;
+            let day = (diffDays % 7) + 1;
+            
+            if (diffDays < 0) {
+              week = 1;
+              day = 1;
+            } else if (week > 12) {
+              week = 12;
+              day = 7;
+            }
 
             setCurrentWeek(week);
+            setCurrentDay(day);
             setActiveCycle(activeCycle);
           }
         }
@@ -188,10 +197,17 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <CountdownHeader currentWeek={currentWeek} totalWeeks={12} />
+        <CountdownHeader currentWeek={currentWeek} totalWeeks={12} currentDay={currentDay} />
 
         <div id="tour-bsc">
-          <BscGrid tactics={tactics} logs={logs} />
+          {activeCycle && (
+            <BscGrid 
+              tactics={tactics} 
+              logs={logs} 
+              currentWeek={currentWeek} 
+              startDate={activeCycle.startDate} 
+            />
+          )}
         </div>
 
         <div
