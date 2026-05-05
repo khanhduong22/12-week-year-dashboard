@@ -84,6 +84,14 @@ export default function ConfigPage() {
           }).catch(() => {});
         }
       }
+      
+      // Update Cycle settings (startDate)
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${activeCycle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate: activeCycle.startDate })
+      });
+      
       alert("Configuration saved to database!");
       await fetchCycles();
     } catch (e) {
@@ -316,8 +324,13 @@ export default function ConfigPage() {
                       <input 
                         type="date" 
                         value={new Date(activeCycle.startDate).toISOString().split('T')[0]}
-                        disabled
-                        className="w-full bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-zinc-100 opacity-80 cursor-not-allowed [color-scheme:dark]"
+                        onChange={(e) => {
+                          const newDate = new Date(e.target.value);
+                          if (!isNaN(newDate.getTime())) {
+                            setActiveCycle({ ...activeCycle, startDate: newDate.toISOString() });
+                          }
+                        }}
+                        className="w-full bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 [color-scheme:dark] transition-colors"
                       />
                     </div>
                     <div>

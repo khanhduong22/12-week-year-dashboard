@@ -18,29 +18,101 @@ export default function DailyLogPage() {
   
   // Real data state
   type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+  type DailyLog = {
+    id: number;
+    date: string;
+    sleepHours: number;
+    energyLevel: number;
+    strategicBlockStatus: BlockStatus;
+    bufferBlockStatus: BlockStatus;
+    breakoutBlockStatus: BlockStatus;
+    tactics: { tacticId: number; isCompleted: boolean }[];
+  };
+
   type CycleData = { id: number; strategicBlockDesc?: string; bufferBlockDesc?: string; breakoutBlockDesc?: string; tactics: Tactic[] };
+  
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
   const [tacticsState, setTacticsState] = useState<Record<number, boolean>>({});
+  const [allLogs, setAllLogs] = useState<DailyLog[]>([]);
+  const [selectedLogDate, setSelectedLogDate] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const resetForm = () => {
+    setSleep([7]);
+    setEnergy([8]);
+    setStrategicBlock("failed");
+    setBufferBlock("failed");
+    setBreakoutBlock("failed");
+    const initialState: Record<number, boolean> = {};
+    tacticsList.forEach((t: Tactic) => { initialState[t.id] = false; });
+    setTacticsState(initialState);
+  };
+
+  const populateForm = (log: DailyLog) => {
+    setSleep([log.sleepHours || 7]);
+    setEnergy([log.energyLevel || 5]);
+    setStrategicBlock(log.strategicBlockStatus || "failed");
+    setBufferBlock(log.bufferBlockStatus || "failed");
+    setBreakoutBlock(log.breakoutBlockStatus || "failed");
+    
+    const newState: Record<number, boolean> = {};
+    tacticsList.forEach((t: Tactic) => { newState[t.id] = false; });
+    if (log.tactics) {
+      log.tactics.forEach((lt: { tacticId: number; isCompleted: boolean }) => { newState[lt.tacticId] = lt.isCompleted; });
+    }
+    setTacticsState(newState);
+  };
+
+  const changeDate = (offset: number) => {
+    const newDate = new Date(selectedLogDate);
+    newDate.setDate(newDate.getDate() + offset);
+    setSelectedLogDate(newDate);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const cycleRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`);
+        const [cycleRes, logsRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`)
+        ]);
+
+        let fetchedTactics: Tactic[] = [];
         if (cycleRes.ok) {
           const cycle: CycleData = await cycleRes.json();
           if (cycle) {
             setCycleData(cycle);
-            
-            // Sort tactics by weight
-            const sortedTactics = (cycle.tactics || []).sort((a, b) => b.weight - a.weight);
-            setTacticsList(sortedTactics);
+            fetchedTactics = (cycle.tactics || []).sort((a, b) => b.weight - a.weight);
+            setTacticsList(fetchedTactics);
             
             const initialState: Record<number, boolean> = {};
-            sortedTactics.forEach((t: Tactic) => { initialState[t.id] = false; });
+            fetchedTactics.forEach((t: Tactic) => { initialState[t.id] = false; });
             setTacticsState(initialState);
+          }
+        }
+        
+        if (logsRes.ok) {
+          const logs = await logsRes.json();
+          setAllLogs(logs);
+          
+          // Populate current day if exists
+          const todayLog = logs.find((l: DailyLog) => {
+            const d = new Date(l.date);
+            const today = new Date();
+            return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+          });
+          if (todayLog) {
+            setSleep([todayLog.sleepHours]);
+            setEnergy([todayLog.energyLevel]);
+            setStrategicBlock(todayLog.strategicBlockStatus);
+            setBufferBlock(todayLog.bufferBlockStatus);
+            setBreakoutBlock(todayLog.breakoutBlockStatus);
+            const newState: Record<number, boolean> = {};
+            fetchedTactics.forEach((t: Tactic) => { newState[t.id] = false; });
+            todayLog.tactics.forEach((lt: { tacticId: number; isCompleted: boolean }) => { newState[lt.tacticId] = lt.isCompleted; });
+            setTacticsState(newState);
           }
         }
       } catch (e) {
@@ -51,6 +123,23 @@ export default function DailyLogPage() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (allLogs.length > 0 || tacticsList.length > 0) {
+      const logForDate = allLogs.find((l: DailyLog) => {
+        const d = new Date(l.date);
+        return d.getFullYear() === selectedLogDate.getFullYear() && 
+               d.getMonth() === selectedLogDate.getMonth() && 
+               d.getDate() === selectedLogDate.getDate();
+      });
+      if (logForDate) {
+        populateForm(logForDate);
+      } else {
+        resetForm();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLogDate, allLogs]);
 
   const isAllTacticsDone = tacticsList.length > 0 && Object.values(tacticsState).every(Boolean);
 
@@ -93,9 +182,29 @@ export default function DailyLogPage() {
           </div>
         </div>
 
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Daily Execution Log</h1>
-          <p className="text-zinc-400 font-medium">Monday, Oct 24 • Week 3, Day 1</p>
+        <div className="mb-10 flex flex-col items-center">
+          <h1 className="text-3xl font-bold tracking-tight mb-4">Daily Execution Log</h1>
+          
+          <div className="flex items-center gap-4 bg-zinc-900/50 p-2 rounded-2xl border border-white/5">
+            <button onClick={() => changeDate(-1)} className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <ChevronLeft className="w-5 h-5 text-zinc-400" />
+            </button>
+            <div className="flex flex-col items-center min-w-[140px]">
+              <span className="font-bold text-white text-lg">
+                {selectedLogDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+              <span className="text-xs text-zinc-500 font-medium">
+                {selectedLogDate.toLocaleDateString('en-US', { weekday: 'long' })}
+              </span>
+            </div>
+            <button 
+              onClick={() => changeDate(1)} 
+              disabled={selectedLogDate.setHours(0,0,0,0) >= new Date().setHours(0,0,0,0)}
+              className="p-2 hover:bg-zinc-800 rounded-full transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronLeft className="w-5 h-5 text-zinc-400 rotate-180" />
+            </button>
+          </div>
         </div>
 
         {!isLoading && !cycleData ? (
@@ -289,6 +398,7 @@ export default function DailyLogPage() {
                     bufferBlockStatus: bufferBlock,
                     breakoutBlockStatus: breakoutBlock,
                     cycleId: cycleData?.id || 1,
+                    date: selectedLogDate.toISOString(),
                     tactics: {
                       create: Object.entries(tacticsState).map(([tId, isDone]) => ({
                         tacticId: parseInt(tId),
@@ -301,6 +411,11 @@ export default function DailyLogPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                   });
+                  
+                  // Update local state without reloading
+                  const newLogsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`);
+                  if (newLogsRes.ok) setAllLogs(await newLogsRes.json());
+                  
                   alert("Daily log saved successfully!");
                 } catch (e) {
                   console.error(e);
