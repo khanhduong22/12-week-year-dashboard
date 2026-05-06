@@ -4,7 +4,7 @@ import { useState } from "react";
 import { generateTactics } from "@/app/actions/generateTactics";
 import { Sparkles, Loader2, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthFetch } from "@/lib/useAuthFetch";
 
 export function AiGoalPlanner() {
   const [goals, setGoals] = useState<string[]>(["", "", ""]);
@@ -13,7 +13,7 @@ export function AiGoalPlanner() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { data: session } = useSession();
+  const authFetch = useAuthFetch();
 
   const handleGoalChange = (index: number, value: string) => {
     const newGoals = [...goals];
@@ -58,11 +58,10 @@ export function AiGoalPlanner() {
         }
       };
 
-      const cycleResponse = await fetch(`${apiUrl}/cycles`, {
+      const cycleResponse = await authFetch(`${apiUrl}/cycles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...((session as unknown as { accessToken?: string })?.accessToken ? { Authorization: `Bearer ${(session as unknown as { accessToken?: string }).accessToken}` } : {})
         },
         body: JSON.stringify(payload)
       });

@@ -5,11 +5,13 @@ import { Flame, Moon, Zap, Target, Mail, CheckCircle2, Save, ChevronLeft, Coffee
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useAuthFetch } from "@/lib/useAuthFetch";
 
 // Types
 type BlockStatus = "failed" | "partial" | "nailed";
 
 export default function DailyLogPage() {
+  const authFetch = useAuthFetch();
   const [sleep, setSleep] = useState([7]);
   const [energy, setEnergy] = useState([8]);
   const [strategicBlock, setStrategicBlock] = useState<BlockStatus>("failed");
@@ -75,8 +77,8 @@ export default function DailyLogPage() {
     const fetchData = async () => {
       try {
         const [cycleRes, logsRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`)
+          authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
+          authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`)
         ]);
 
         let fetchedTactics: Tactic[] = [];
@@ -406,14 +408,14 @@ export default function DailyLogPage() {
                       }))
                     }
                   };
-                  await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
+                  await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                   });
                   
                   // Update local state without reloading
-                  const newLogsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`);
+                  const newLogsRes = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`);
                   if (newLogsRes.ok) setAllLogs(await newLogsRes.json());
                   
                   alert("Daily log saved successfully!");

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, Save, Plus, Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe, Sparkles, CheckCircle2, Play, XCircle } from "lucide-react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useAuthFetch } from "@/lib/useAuthFetch";
 
 type Tactic = { id: number; name: string; category: string; weight: number; targetCount: number; cycleId: number };
 type Cycle = { 
@@ -19,6 +20,7 @@ type Cycle = {
 };
 
 export default function ConfigPage() {
+  const authFetch = useAuthFetch();
   const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
   const [draftCycles, setDraftCycles] = useState<Cycle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function ConfigPage() {
   const fetchCycles = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`);
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`);
       if (res.ok) {
         const data: Cycle[] = await res.json();
         // Sort tactics by weight descending for all cycles
@@ -62,7 +64,8 @@ export default function ConfigPage() {
 
   useEffect(() => {
     fetchCycles();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authFetch]);
 
   const handleSaveActiveTactics = async () => {
     if (!activeCycle) return;
@@ -71,13 +74,13 @@ export default function ConfigPage() {
       for (const t of activeCycle.tactics) {
         if (t.id < 0) {
           // New tactic added locally but not saved yet
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`, {
+          await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: t.name, category: t.category, weight: t.weight, targetCount: t.targetCount, cycleId: activeCycle.id })
           });
         } else {
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
+          await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ weight: t.weight, targetCount: t.targetCount })
@@ -86,7 +89,7 @@ export default function ConfigPage() {
       }
       
       // Update Cycle settings (startDate)
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${activeCycle.id}`, {
+      await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${activeCycle.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate: activeCycle.startDate })
@@ -105,7 +108,7 @@ export default function ConfigPage() {
   const handleActivateCycle = async (id: number) => {
     if (!confirm("This will close the current active cycle and start this new plan. Continue?")) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${id}/activate`, { method: 'POST' });
+      await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${id}/activate`, { method: 'POST' });
       await fetchCycles();
       setActiveTab("active");
     } catch (e) {
@@ -118,7 +121,7 @@ export default function ConfigPage() {
     if (!activeCycle) return;
     if (!confirm("Are you sure you want to close the current active cycle? You won't be able to log daily progress until you activate a new one.")) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${activeCycle.id}`, {
+      await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/${activeCycle.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: false })
@@ -157,7 +160,7 @@ export default function ConfigPage() {
     if (!activeCycle) return;
     if (id > 0) {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${id}`, {
+        await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${id}`, {
           method: 'DELETE'
         });
       } catch (e) {

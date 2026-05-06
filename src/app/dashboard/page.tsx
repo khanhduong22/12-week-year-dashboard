@@ -11,6 +11,7 @@ import { EnergyChart } from "@/components/dashboard/EnergyChart";
 import { OnboardingTour } from "@/components/dashboard/OnboardingTour";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useAuthFetch } from "@/lib/useAuthFetch";
 
 export type DailyLog = {
   id: number;
@@ -22,6 +23,7 @@ export type DailyLog = {
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
+  const authFetch = useAuthFetch();
   const [tactics, setTactics] = useState<Tactic[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -32,14 +34,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (status !== "authenticated" || !session) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const token = (session as any).accessToken;
 
       try {
-        const headers = { Authorization: `Bearer ${token}` };
         const [logsRes, cyclesRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`, { headers }),
+          authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`),
+          authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles`),
         ]);
 
         if (logsRes.ok) setLogs(await logsRes.json());

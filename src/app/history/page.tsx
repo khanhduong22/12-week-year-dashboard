@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Moon, Zap, Target, Mail, Coffee, CheckCircle2, Circle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useAuthFetch } from "@/lib/useAuthFetch";
 
 type BlockStatus = "failed" | "partial" | "nailed";
 type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
@@ -19,6 +20,7 @@ type DailyLog = {
 };
 
 export default function HistoryPage() {
+  const authFetch = useAuthFetch();
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,8 +34,8 @@ export default function HistoryPage() {
     const fetchData = async () => {
       try {
         const [cycleRes, logsRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`)
+          authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
+          authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`)
         ]);
         
         if (cycleRes.ok) {
