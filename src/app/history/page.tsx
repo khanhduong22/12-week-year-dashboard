@@ -142,7 +142,7 @@ export default function HistoryPage() {
       <main className="max-w-5xl mx-auto px-4 pt-8">
         {/* Navigation & Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
+          <Link href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
             <ChevronLeft className="w-6 h-6 text-zinc-400" />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">Execution History</h1>

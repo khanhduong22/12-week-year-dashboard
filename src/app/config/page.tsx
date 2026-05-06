@@ -235,7 +235,7 @@ export default function ConfigPage() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-24 font-sans selection:bg-zinc-800">
       <main className="max-w-4xl mx-auto px-4 pt-8">
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
+          <Link href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
             <ChevronLeft className="w-6 h-6 text-zinc-400" />
           </Link>
           <div className="px-3 py-1.5 rounded-full bg-zinc-900 border border-white/10 text-sm font-medium">
@@ -560,7 +560,7 @@ export default function ConfigPage() {
                 <Sparkles className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-zinc-300 mb-2">No Draft Plans</h3>
                 <p className="text-zinc-500 mb-6">Go to the AI Goal Planner to generate some tactics.</p>
-                <Link href="/about" className="bg-orange-500 text-zinc-950 px-6 py-3 rounded-full font-bold hover:bg-orange-400 transition-colors inline-block">
+                <Link href="/" className="bg-orange-500 text-zinc-950 px-6 py-3 rounded-full font-bold hover:bg-orange-400 transition-colors inline-block">
                   Generate with AI
                 </Link>
               </div>

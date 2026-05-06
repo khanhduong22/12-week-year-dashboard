@@ -173,7 +173,7 @@ export default function DailyLogPage() {
       <main className="max-w-2xl mx-auto px-4 pt-8">
         {/* Navigation & Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
+          <Link href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-zinc-800/50 transition-colors">
             <ChevronLeft className="w-6 h-6 text-zinc-400" />
           </Link>
           <div className="flex items-center gap-2 bg-orange-500/10 text-orange-400 px-3 py-1.5 rounded-full border border-orange-500/20">
