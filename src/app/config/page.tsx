@@ -6,7 +6,18 @@ import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 
-type Tactic = { id: number; name: string; category: string; weight: number; targetCount: number; cycleId: number };
+type Tactic = { 
+  id: number; 
+  name: string; 
+  category: string; 
+  weight: number; 
+  targetCount: number; 
+  cycleId: number;
+  indicatorType?: string;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+};
 type Cycle = { 
   id: number; 
   name: string; 
@@ -33,6 +44,9 @@ export default function ConfigPage() {
   const [newTacticCategory, setNewTacticCategory] = useState("Career & Business");
   const [newTacticWeight, setNewTacticWeight] = useState(3);
   const [newTacticTargetCount, setNewTacticTargetCount] = useState(7);
+  const [newTacticIndicatorType, setNewTacticIndicatorType] = useState("LEAD");
+  const [newTacticTargetValue, setNewTacticTargetValue] = useState<number>(0);
+  const [newTacticUnit, setNewTacticUnit] = useState("");
 
   const fetchCycles = async () => {
     setIsLoading(true);
@@ -77,13 +91,28 @@ export default function ConfigPage() {
           await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: t.name, category: t.category, weight: t.weight, targetCount: t.targetCount, cycleId: activeCycle.id })
+            body: JSON.stringify({ 
+              name: t.name, 
+              category: t.category, 
+              weight: t.weight, 
+              targetCount: t.targetCount, 
+              cycleId: activeCycle.id,
+              indicatorType: t.indicatorType,
+              targetValue: t.targetValue,
+              currentValue: t.currentValue,
+              unit: t.unit
+            })
           });
         } else {
           await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ weight: t.weight, targetCount: t.targetCount })
+            body: JSON.stringify({ 
+              weight: t.weight, 
+              targetCount: t.targetCount,
+              targetValue: t.targetValue,
+              currentValue: t.currentValue
+            })
           }).catch(() => {});
         }
       }
@@ -142,7 +171,11 @@ export default function ConfigPage() {
       category: newTacticCategory,
       weight: newTacticWeight,
       targetCount: newTacticTargetCount,
-      cycleId: activeCycle.id
+      cycleId: activeCycle.id,
+      indicatorType: newTacticIndicatorType,
+      targetValue: newTacticIndicatorType === "LAG" ? newTacticTargetValue : undefined,
+      currentValue: newTacticIndicatorType === "LAG" ? 0 : undefined,
+      unit: newTacticIndicatorType === "LAG" ? newTacticUnit : undefined,
     };
     
     setActiveCycle({
@@ -154,6 +187,8 @@ export default function ConfigPage() {
     setNewTacticName("");
     setNewTacticWeight(3);
     setNewTacticTargetCount(7);
+    setNewTacticTargetValue(0);
+    setNewTacticUnit("");
   };
 
   const handleDeleteTactic = async (id: number) => {
@@ -186,6 +221,14 @@ export default function ConfigPage() {
     setActiveCycle({
       ...activeCycle,
       tactics: activeCycle.tactics.map(t => t.id === id ? { ...t, targetCount: val } : t)
+    });
+  };
+
+  const updateCurrentValue = (id: number, val: number) => {
+    if (!activeCycle) return;
+    setActiveCycle({
+      ...activeCycle,
+      tactics: activeCycle.tactics.map(t => t.id === id ? { ...t, currentValue: val } : t)
     });
   };
 
@@ -398,17 +441,56 @@ export default function ConfigPage() {
                       onChange={(e) => setNewTacticWeight(parseInt(e.target.value, 10))}
                       className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 mb-2"
                     />
-                    <div className="flex items-center justify-between bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3">
-                      <span className="text-sm font-medium text-zinc-400">Target Count (1-7 days/week):</span>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="7" 
-                        value={newTacticTargetCount}
-                        onChange={(e) => setNewTacticTargetCount(parseInt(e.target.value, 10) || 1)}
-                        className="w-16 bg-zinc-800 rounded-lg text-center text-white font-bold px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                      />
+                    <div className="flex gap-4 mb-2">
+                      <button 
+                        onClick={() => setNewTacticIndicatorType("LEAD")}
+                        className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors border ${newTacticIndicatorType === "LEAD" ? "bg-emerald-500 text-zinc-950 border-emerald-500" : "bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500"}`}
+                      >
+                        Lead Indicator
+                      </button>
+                      <button 
+                        onClick={() => setNewTacticIndicatorType("LAG")}
+                        className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors border ${newTacticIndicatorType === "LAG" ? "bg-indigo-500 text-zinc-950 border-indigo-500" : "bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500"}`}
+                      >
+                        Lag Indicator (Target)
+                      </button>
                     </div>
+
+                    {newTacticIndicatorType === "LEAD" ? (
+                      <div className="flex items-center justify-between bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3">
+                        <span className="text-sm font-medium text-zinc-400">Target Count (1-7 days/week):</span>
+                        <input 
+                          type="number" 
+                          min="1" 
+                          max="7" 
+                          value={newTacticTargetCount}
+                          onChange={(e) => setNewTacticTargetCount(parseInt(e.target.value, 10) || 1)}
+                          className="w-16 bg-zinc-800 rounded-lg text-center text-white font-bold px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4 bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-zinc-500 mb-1">Target Value</label>
+                          <input 
+                            type="number" 
+                            step="0.1"
+                            value={newTacticTargetValue}
+                            onChange={(e) => setNewTacticTargetValue(parseFloat(e.target.value) || 0)}
+                            className="w-full bg-zinc-800 rounded-lg text-white font-bold px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-zinc-500 mb-1">Unit (e.g. kg, $, pts)</label>
+                          <input 
+                            type="text" 
+                            value={newTacticUnit}
+                            onChange={(e) => setNewTacticUnit(e.target.value)}
+                            className="w-full bg-zinc-800 rounded-lg text-white font-bold px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                          />
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-end gap-3 pt-2">
                       <button onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white">Cancel</button>
                       <button onClick={handleAddTactic} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-sm font-bold rounded-lg transition-colors">Add Tactic</button>
@@ -458,21 +540,37 @@ export default function ConfigPage() {
                             className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                           />
                         </div>
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <label className="text-xs font-medium text-zinc-400">Adjust Target (Days/Week)</label>
-                            <span className="text-xs font-bold text-blue-400">{t.targetCount}x</span>
+                        {t.indicatorType === "LAG" ? (
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <label className="text-xs font-medium text-zinc-400">Update Current Value ({t.unit})</label>
+                              <span className="text-xs font-bold text-indigo-400">{t.currentValue} / {t.targetValue}</span>
+                            </div>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={t.currentValue}
+                              onChange={(e) => updateCurrentValue(t.id, parseFloat(e.target.value) || 0)}
+                              className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
                           </div>
-                          <input
-                            type="range"
-                            min="1"
-                            max="7"
-                            step="1"
-                            value={t.targetCount}
-                            onChange={(e) => updateTargetCount(t.id, parseInt(e.target.value, 10))}
-                            className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                          />
-                        </div>
+                        ) : (
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <label className="text-xs font-medium text-zinc-400">Adjust Target (Days/Week)</label>
+                              <span className="text-xs font-bold text-blue-400">{t.targetCount}x</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="7"
+                              step="1"
+                              value={t.targetCount}
+                              onChange={(e) => updateTargetCount(t.id, parseInt(e.target.value, 10))}
+                              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -20,13 +20,20 @@ export function EnergyChart({ logs }: EnergyChartProps) {
       day,
       energy: log.energyLevel,
       sleep: log.sleepHours,
+      weight: log.weight,
+      bodyFat: log.bodyFat,
     };
   });
 
   return (
     <Card className="bg-background/50 backdrop-blur-sm border-white/10 shadow-lg">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Energy & Bio-metric Chart</CardTitle>
+        <CardTitle className="text-lg font-semibold flex items-center justify-between">
+          <span>Bio-metric & Energy Chart</span>
+          <span className="text-xs font-normal text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+            Trends
+          </span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="h-[300px] w-full">
         {data.length === 0 ? (
@@ -45,11 +52,19 @@ export function EnergyChart({ logs }: EnergyChartProps) {
                 axisLine={false} 
               />
               <YAxis 
+                yAxisId="left"
                 stroke="#888888" 
                 fontSize={12} 
                 tickLine={false} 
                 axisLine={false} 
-                tickFormatter={(value) => `${value}`}
+              />
+              <YAxis 
+                yAxisId="right"
+                orientation="right"
+                stroke="#888888" 
+                fontSize={12} 
+                tickLine={false} 
+                axisLine={false} 
               />
               <Tooltip 
                 contentStyle={{ backgroundColor: "#18181b", borderColor: "#27272a", borderRadius: "8px" }}
@@ -57,21 +72,41 @@ export function EnergyChart({ logs }: EnergyChartProps) {
               />
               <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
               <Line 
+                yAxisId="left"
                 type="monotone" 
                 dataKey="energy" 
-                name="Energy Level (1-10)"
+                name="Energy (1-10)"
                 stroke="#3b82f6" 
                 strokeWidth={2} 
                 dot={{ r: 4, fill: "#3b82f6" }} 
                 activeDot={{ r: 6 }} 
               />
               <Line 
+                yAxisId="left"
                 type="monotone" 
                 dataKey="sleep" 
-                name="Sleep Duration (hrs)"
+                name="Sleep (hrs)"
                 stroke="#8b5cf6" 
                 strokeWidth={2} 
                 dot={{ r: 4, fill: "#8b5cf6" }} 
+              />
+              <Line 
+                yAxisId="right"
+                type="monotone" 
+                dataKey="weight" 
+                name="Weight"
+                stroke="#10b981" 
+                strokeWidth={2} 
+                dot={{ r: 4, fill: "#10b981" }} 
+              />
+              <Line 
+                yAxisId="right"
+                type="monotone" 
+                dataKey="bodyFat" 
+                name="Body Fat %"
+                stroke="#f59e0b" 
+                strokeWidth={2} 
+                dot={{ r: 4, fill: "#f59e0b" }} 
               />
             </LineChart>
           </ResponsiveContainer>

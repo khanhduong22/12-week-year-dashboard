@@ -3,20 +3,32 @@
 import { useState, useEffect } from "react";
 import { CountdownHeader } from "@/components/dashboard/CountdownHeader";
 import { BscGrid } from "@/components/dashboard/BscGrid";
-import {
-  ScorecardChecklist,
-  Tactic,
-} from "@/components/dashboard/ScorecardChecklist";
+import { VisionBoard } from "@/components/dashboard/VisionBoard";
+import { ScorecardChecklist } from "@/components/dashboard/ScorecardChecklist";
 import { EnergyChart } from "@/components/dashboard/EnergyChart";
 import { OnboardingTour } from "@/components/dashboard/OnboardingTour";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 
+export type Tactic = { 
+  id: number; 
+  name: string; 
+  category: string; 
+  weight: number; 
+  targetCount?: number;
+  indicatorType?: string;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+};
+
 export type DailyLog = {
   id: number;
   sleepHours: number;
   energyLevel: number;
+  weight?: number;
+  bodyFat?: number;
   createdAt: string;
   tactics: { tacticId: number; isCompleted: boolean }[];
 };
@@ -86,6 +98,10 @@ export default function DashboardPage() {
     fetchData();
   }, [session, status]);
 
+  // Separate Tactics
+  const lagTactics = tactics.filter(t => t.indicatorType === "LAG");
+  const leadTactics = tactics.filter(t => t.indicatorType !== "LAG"); // Default to LEAD
+
   // Calculate Weekly Scorecard (Lead Indicators)
   // Filter logs for the CURRENT week only
   const currentWeekLogs = logs.filter(log => {
@@ -107,7 +123,7 @@ export default function DashboardPage() {
     return logWeek === currentWeek;
   });
 
-  const tacticProgress = tactics.map((t) => {
+  const tacticProgress = leadTactics.map((t) => {
     const completedCount = currentWeekLogs.filter((log) =>
       log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted),
     ).length;
@@ -122,8 +138,8 @@ export default function DashboardPage() {
   let totalPossibleWeight = 0;
   let earnedWeight = 0;
 
-  if (currentWeekLogs.length > 0 || tactics.length > 0) {
-    tactics.forEach((t) => {
+  if (currentWeekLogs.length > 0 || leadTactics.length > 0) {
+    leadTactics.forEach((t) => {
       const progress = tacticProgress.find((p) => p.tacticId === t.id);
       const targetPerWeek = t.targetCount || 7;
       const completionRate = Math.min(
@@ -214,10 +230,15 @@ export default function DashboardPage() {
 
         <CountdownHeader currentWeek={currentWeek} totalWeeks={12} currentDay={currentDay} />
 
+        {/* Vision Board for Lag Indicators */}
+        <div id="tour-vision">
+          <VisionBoard lagTactics={lagTactics} />
+        </div>
+
         <div id="tour-bsc">
           {activeCycle && (
             <BscGrid 
-              tactics={tactics} 
+              tactics={leadTactics} 
               logs={logs} 
               currentWeek={currentWeek} 
               startDate={activeCycle.startDate} 
@@ -229,7 +250,7 @@ export default function DashboardPage() {
           id="tour-scorecard"
           className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         >
-          <ScorecardChecklist tactics={tactics} progress={tacticProgress} />
+          <ScorecardChecklist tactics={leadTactics} progress={tacticProgress} />
           <EnergyChart logs={logs} />
         </div>
 

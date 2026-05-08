@@ -14,6 +14,8 @@ export default function DailyLogPage() {
   const authFetch = useAuthFetch();
   const [sleep, setSleep] = useState([7]);
   const [energy, setEnergy] = useState([8]);
+  const [weight, setWeight] = useState<string>("");
+  const [bodyFat, setBodyFat] = useState<string>("");
   const [strategicBlock, setStrategicBlock] = useState<BlockStatus>("failed");
   const [bufferBlock, setBufferBlock] = useState<BlockStatus>("failed");
   const [breakoutBlock, setBreakoutBlock] = useState<BlockStatus>("failed");
@@ -25,6 +27,8 @@ export default function DailyLogPage() {
     date: string;
     sleepHours: number;
     energyLevel: number;
+    weight?: number;
+    bodyFat?: number;
     strategicBlockStatus: BlockStatus;
     bufferBlockStatus: BlockStatus;
     breakoutBlockStatus: BlockStatus;
@@ -44,6 +48,8 @@ export default function DailyLogPage() {
   const resetForm = () => {
     setSleep([7]);
     setEnergy([8]);
+    setWeight("");
+    setBodyFat("");
     setStrategicBlock("failed");
     setBufferBlock("failed");
     setBreakoutBlock("failed");
@@ -55,6 +61,8 @@ export default function DailyLogPage() {
   const populateForm = (log: DailyLog) => {
     setSleep([log.sleepHours || 7]);
     setEnergy([log.energyLevel || 5]);
+    setWeight(log.weight ? log.weight.toString() : "");
+    setBodyFat(log.bodyFat ? log.bodyFat.toString() : "");
     setStrategicBlock(log.strategicBlockStatus || "failed");
     setBufferBlock(log.bufferBlockStatus || "failed");
     setBreakoutBlock(log.breakoutBlockStatus || "failed");
@@ -86,7 +94,9 @@ export default function DailyLogPage() {
           const cycle: CycleData = await cycleRes.json();
           if (cycle) {
             setCycleData(cycle);
-            fetchedTactics = (cycle.tactics || []).sort((a, b) => b.weight - a.weight);
+            // Filter out LAG indicators for daily execution log
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            fetchedTactics = (cycle.tactics || []).filter((t: any) => t.indicatorType !== "LAG").sort((a, b) => b.weight - a.weight);
             setTacticsList(fetchedTactics);
             
             const initialState: Record<number, boolean> = {};
@@ -108,6 +118,8 @@ export default function DailyLogPage() {
           if (todayLog) {
             setSleep([todayLog.sleepHours]);
             setEnergy([todayLog.energyLevel]);
+            setWeight(todayLog.weight ? todayLog.weight.toString() : "");
+            setBodyFat(todayLog.bodyFat ? todayLog.bodyFat.toString() : "");
             setStrategicBlock(todayLog.strategicBlockStatus);
             setBufferBlock(todayLog.bufferBlockStatus);
             setBreakoutBlock(todayLog.breakoutBlockStatus);
@@ -268,6 +280,32 @@ export default function DailyLogPage() {
                   className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                 />
               </div>
+
+              {/* Bio-Metrics (Weight & Body Fat) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-400">Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="e.g. 70.5"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-400">Body Fat (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={bodyFat}
+                    onChange={(e) => setBodyFat(e.target.value)}
+                    placeholder="e.g. 15.2"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                  />
+                </div>
+              </div>
             </div>
           </section>
 
@@ -396,6 +434,8 @@ export default function DailyLogPage() {
                   const payload = {
                     sleepHours: sleep[0],
                     energyLevel: energy[0],
+                    weight: weight ? parseFloat(weight) : null,
+                    bodyFat: bodyFat ? parseFloat(bodyFat) : null,
                     strategicBlockStatus: strategicBlock,
                     bufferBlockStatus: bufferBlock,
                     breakoutBlockStatus: breakoutBlock,

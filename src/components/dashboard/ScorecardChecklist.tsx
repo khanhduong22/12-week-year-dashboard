@@ -1,7 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info } from "lucide-react";
 
-export type Tactic = { id: number; name: string; category: string; weight: number; targetCount?: number };
+export type Tactic = { 
+  id: number; 
+  name: string; 
+  category: string; 
+  weight: number; 
+  targetCount?: number;
+  indicatorType?: string;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+};
 export type TacticProgress = { tacticId: number; completed: number; total: number };
 
 interface ScorecardChecklistProps {
