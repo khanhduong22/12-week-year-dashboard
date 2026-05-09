@@ -284,15 +284,39 @@ export default function ConfigPage() {
             })
           });
         } else {
-          // Update tactic weight
+          const newIndicators = t.indicators.filter(ind => ind.id < 0);
+          const existingIndicators = t.indicators.filter(ind => ind.id > 0);
+          const existingIndicatorIds = existingIndicators.map(ind => ind.id);
+
           await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ weight: t.weight })
+            body: JSON.stringify({ 
+              weight: t.weight,
+              indicators: {
+                deleteMany: existingIndicatorIds.length > 0 
+                  ? { id: { notIn: existingIndicatorIds } }
+                  : { id: { notIn: [-1] } },
+                create: newIndicators.map(ind => ({
+                  name: ind.name,
+                  type: ind.type,
+                  targetCount: ind.targetCount,
+                  targetValue: ind.targetValue,
+                  unit: ind.unit
+                })),
+                update: existingIndicators.map(ind => ({
+                  where: { id: ind.id },
+                  data: {
+                    name: ind.name,
+                    type: ind.type,
+                    targetCount: ind.targetCount,
+                    targetValue: ind.targetValue,
+                    unit: ind.unit
+                  }
+                }))
+              }
+            })
           }).catch(() => {});
-          
-          // Note: Full UI for editing individual indicator targets is complex.
-          // For now, we rely on AI planner to set them up, and only allow adjusting Tactic weight here.
         }
       }
       
