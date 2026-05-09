@@ -21,7 +21,8 @@ export default function DailyLogPage() {
   const [breakoutBlock, setBreakoutBlock] = useState<BlockStatus>("failed");
   
   // Real data state
-  type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+  type Indicator = { id: number; name: string; type: string; targetValue?: number; unit?: string };
+  type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number; indicators: Indicator[] };
   type DailyLog = {
     id: number;
     date: string;
@@ -32,14 +33,14 @@ export default function DailyLogPage() {
     strategicBlockStatus: BlockStatus;
     bufferBlockStatus: BlockStatus;
     breakoutBlockStatus: BlockStatus;
-    tactics: { tacticId: number; isCompleted: boolean }[];
+    indicators: { indicatorId: number; isCompleted: boolean }[];
   };
 
   type CycleData = { id: number; strategicBlockDesc?: string; bufferBlockDesc?: string; breakoutBlockDesc?: string; tactics: Tactic[] };
   
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
-  const [tacticsState, setTacticsState] = useState<Record<number, boolean>>({});
+  const [indicatorsState, setIndicatorsState] = useState<Record<number, boolean>>({});
   const [allLogs, setAllLogs] = useState<DailyLog[]>([]);
   const [selectedLogDate, setSelectedLogDate] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(true);
@@ -54,8 +55,12 @@ export default function DailyLogPage() {
     setBufferBlock("failed");
     setBreakoutBlock("failed");
     const initialState: Record<number, boolean> = {};
-    tacticsList.forEach((t: Tactic) => { initialState[t.id] = false; });
-    setTacticsState(initialState);
+    tacticsList.forEach((t: Tactic) => {
+      t.indicators?.forEach((ind) => {
+        if (ind.type === "LEAD") initialState[ind.id] = false;
+      });
+    });
+    setIndicatorsState(initialState);
   };
 
   const populateForm = (log: DailyLog) => {
@@ -68,11 +73,15 @@ export default function DailyLogPage() {
     setBreakoutBlock(log.breakoutBlockStatus || "failed");
     
     const newState: Record<number, boolean> = {};
-    tacticsList.forEach((t: Tactic) => { newState[t.id] = false; });
-    if (log.tactics) {
-      log.tactics.forEach((lt: { tacticId: number; isCompleted: boolean }) => { newState[lt.tacticId] = lt.isCompleted; });
+    tacticsList.forEach((t: Tactic) => {
+      t.indicators?.forEach((ind) => {
+        if (ind.type === "LEAD") newState[ind.id] = false;
+      });
+    });
+    if (log.indicators) {
+      log.indicators.forEach((li: { indicatorId: number; isCompleted: boolean }) => { newState[li.indicatorId] = li.isCompleted; });
     }
-    setTacticsState(newState);
+    setIndicatorsState(newState);
   };
 
   const changeDate = (offset: number) => {
@@ -94,14 +103,17 @@ export default function DailyLogPage() {
           const cycle: CycleData = await cycleRes.json();
           if (cycle) {
             setCycleData(cycle);
-            // Filter out LAG indicators for daily execution log
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            fetchedTactics = (cycle.tactics || []).filter((t: any) => t.indicatorType !== "LAG").sort((a, b) => b.weight - a.weight);
+            // No need to filter LAG indicators at the Tactic level now, they are nested.
+            fetchedTactics = (cycle.tactics || []).sort((a, b) => b.weight - a.weight);
             setTacticsList(fetchedTactics);
             
             const initialState: Record<number, boolean> = {};
-            fetchedTactics.forEach((t: Tactic) => { initialState[t.id] = false; });
-            setTacticsState(initialState);
+            fetchedTactics.forEach((t: Tactic) => {
+              t.indicators?.forEach((ind) => {
+                if (ind.type === "LEAD") initialState[ind.id] = false;
+              });
+            });
+            setIndicatorsState(initialState);
           }
         }
         
@@ -124,9 +136,13 @@ export default function DailyLogPage() {
             setBufferBlock(todayLog.bufferBlockStatus);
             setBreakoutBlock(todayLog.breakoutBlockStatus);
             const newState: Record<number, boolean> = {};
-            fetchedTactics.forEach((t: Tactic) => { newState[t.id] = false; });
-            todayLog.tactics.forEach((lt: { tacticId: number; isCompleted: boolean }) => { newState[lt.tacticId] = lt.isCompleted; });
-            setTacticsState(newState);
+            fetchedTactics.forEach((t: Tactic) => {
+              t.indicators?.forEach((ind) => {
+                if (ind.type === "LEAD") newState[ind.id] = false;
+              });
+            });
+            todayLog.indicators?.forEach((li: { indicatorId: number; isCompleted: boolean }) => { newState[li.indicatorId] = li.isCompleted; });
+            setIndicatorsState(newState);
           }
         }
       } catch (e) {
@@ -155,7 +171,7 @@ export default function DailyLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLogDate, allLogs]);
 
-  const isAllTacticsDone = tacticsList.length > 0 && Object.values(tacticsState).every(Boolean);
+  const isAllTacticsDone = Object.keys(indicatorsState).length > 0 && Object.values(indicatorsState).every(Boolean);
 
   const cycleStatus = (current: BlockStatus): BlockStatus => {
     if (current === "failed") return "partial";
@@ -401,19 +417,36 @@ export default function DailyLogPage() {
               )}
             </h2>
             
-            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-2">
-              {tacticsList.map(tactic => (
-                <label key={tactic.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
-                  <Checkbox 
-                    checked={tacticsState[tactic.id] || false} 
-                    onCheckedChange={(checked) => setTacticsState(p => ({...p, [tactic.id]: checked as boolean}))} 
-                    className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
-                  />
-                  <span className={cn("text-base font-medium transition-colors", tacticsState[tactic.id] ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
-                    {tactic.name}
-                  </span>
-                </label>
-              ))}
+            <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 space-y-6">
+              {tacticsList.map(tactic => {
+                const leads = (tactic.indicators || []).filter(i => i.type === "LEAD");
+                if (leads.length === 0) return null;
+                
+                const allLeadsCompleted = leads.every(l => indicatorsState[l.id]);
+
+                return (
+                  <div key={tactic.id} className="space-y-2">
+                    <h3 className={cn("text-xs font-bold uppercase tracking-wider mb-2", allLeadsCompleted ? "text-emerald-500" : "text-zinc-400")}>
+                      {tactic.name}
+                    </h3>
+                    <div className="space-y-1">
+                      {leads.map(lead => (
+                        <label key={lead.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-800/50 transition-colors cursor-pointer group">
+                          <Checkbox 
+                            checked={indicatorsState[lead.id] || false} 
+                            onCheckedChange={(checked) => setIndicatorsState(p => ({...p, [lead.id]: checked as boolean}))} 
+                            className="w-6 h-6 rounded-full data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" 
+                          />
+                          <span className={cn("text-base font-medium transition-colors flex-1", indicatorsState[lead.id] ? "text-zinc-500 line-through" : "text-zinc-200 group-hover:text-white")}>
+                            {lead.name}
+                            {lead.targetValue && <span className="block text-xs text-orange-400/80 mt-0.5 no-underline">🎯 Mục tiêu: {lead.targetValue} {lead.unit}</span>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
               {tacticsList.length === 0 && !isLoading && (
                 <div className="p-4 text-zinc-500 text-center">No tactics configured yet. Go to Config page to add some!</div>
               )}
@@ -441,9 +474,9 @@ export default function DailyLogPage() {
                     breakoutBlockStatus: breakoutBlock,
                     cycleId: cycleData?.id || 1,
                     date: selectedLogDate.toISOString(),
-                    tactics: {
-                      create: Object.entries(tacticsState).map(([tId, isDone]) => ({
-                        tacticId: parseInt(tId),
+                    indicators: {
+                      create: Object.entries(indicatorsState).map(([indId, isDone]) => ({
+                        indicatorId: parseInt(indId),
                         isCompleted: isDone
                       }))
                     }

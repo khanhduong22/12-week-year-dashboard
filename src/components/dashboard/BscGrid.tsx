@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe, Sparkles } from "lucide-react";
-import type { DailyLog } from "@/app/dashboard/page";
+import type { DailyLog, Tactic } from "@/app/dashboard/page";
 
 interface BscGridProps {
-  tactics: { id: number; name: string; category: string; weight: number; targetCount?: number }[];
+  tactics: Tactic[];
   logs: DailyLog[];
   currentWeek: number;
   startDate: string;
@@ -14,7 +14,8 @@ export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps)
   const activeCategories = Array.from(new Set(tactics.map(t => t.category)));
 
   const getCategoryStats = (category: string) => {
-    const categoryTactics = tactics.filter(t => t.category === category);
+    // Only consider tactics that have LEAD indicators for BSC execution score
+    const categoryTactics = tactics.filter(t => t.category === category && (t.indicators || []).some(i => i.type === "LEAD"));
     if (categoryTactics.length === 0) return { maxPoints: 0, earnedPoints: 0, percentage: 0 };
 
     let maxPoints = 0;
@@ -30,8 +31,7 @@ export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps)
     const normStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
 
     logs.forEach(log => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const logDate = new Date((log as any).date || log.createdAt);
+      const logDate = new Date(log.date || log.createdAt);
       const normLog = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
       
       if (normLog >= normStart) {
@@ -44,7 +44,8 @@ export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps)
     });
 
     categoryTactics.forEach(t => {
-      const target = t.targetCount || 7;
+      const leadInds = (t.indicators || []).filter(i => i.type === "LEAD");
+      const target = Math.max(...leadInds.map(i => i.targetCount || 7));
       
       // Max points is the weight * number of active weeks
       maxPoints += t.weight * totalWeeks;
@@ -52,7 +53,8 @@ export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps)
       // Earned points calculated per week (strict 12WY scoring)
       Object.values(weeks).forEach(weekLogs => {
         const completedInWeek = weekLogs.filter(log => 
-          log.tactics?.some(lt => lt.tacticId === t.id && lt.isCompleted)
+          // A tactic is completed on a day if all its LEAD indicators are completed
+          leadInds.every(ind => log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted))
         ).length;
         
         if (completedInWeek >= target) {

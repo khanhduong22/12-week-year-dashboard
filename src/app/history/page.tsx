@@ -7,7 +7,25 @@ import { cn } from "@/lib/utils";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 
 type BlockStatus = "failed" | "partial" | "nailed";
-type Tactic = { id: number; name: string; category: string; weight: number; cycleId: number };
+type Indicator = {
+  id: number;
+  name: string;
+  type: string;
+  targetCount?: number;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+};
+
+type Tactic = { 
+  id: number; 
+  name: string; 
+  category: string; 
+  weight: number; 
+  cycleId: number;
+  indicators: Indicator[];
+};
+
 type DailyLog = {
   id: number;
   date: string;
@@ -16,7 +34,7 @@ type DailyLog = {
   strategicBlockStatus: BlockStatus;
   bufferBlockStatus: BlockStatus;
   breakoutBlockStatus: BlockStatus;
-  tactics: { tacticId: number; isCompleted: boolean }[];
+  indicators: { indicatorId: number; isCompleted: boolean }[];
 };
 
 export default function HistoryPage() {
@@ -290,28 +308,40 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                {/* Tactics */}
-                <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-2">
-                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-3 mt-3 mb-2">Tactics</h4>
+                {/* Tactics and Indicators */}
+                <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4">
+                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4">Indicators</h4>
                   {tacticsList.map(tactic => {
-                    const logTactic = currentLog.tactics?.find(lt => lt.tacticId === tactic.id);
-                    const isCompleted = logTactic?.isCompleted || false;
-                    
+                    const leadInds = (tactic.indicators || []).filter(i => i.type === "LEAD");
+                    if (leadInds.length === 0) return null;
+
                     return (
-                      <div key={tactic.id} className="flex items-center gap-3 p-3 group">
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-zinc-600 shrink-0" />
-                        )}
-                        <span className={cn("text-sm font-medium transition-colors", isCompleted ? "text-zinc-500 line-through" : "text-zinc-200")}>
-                          {tactic.name}
-                        </span>
+                      <div key={tactic.id} className="mb-4 last:mb-0">
+                        <div className="text-sm font-semibold text-zinc-400 mb-2">{tactic.name}</div>
+                        <div className="space-y-2">
+                          {leadInds.map(ind => {
+                            const logInd = currentLog.indicators?.find(li => li.indicatorId === ind.id);
+                            const isCompleted = logInd?.isCompleted || false;
+                            
+                            return (
+                              <div key={ind.id} className="flex items-center gap-3 pl-2 group">
+                                {isCompleted ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-zinc-600 shrink-0" />
+                                )}
+                                <span className={cn("text-sm transition-colors", isCompleted ? "text-zinc-500 line-through" : "text-zinc-200")}>
+                                  {ind.name}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
                   {tacticsList.length === 0 && (
-                    <div className="p-4 text-center text-zinc-500 text-sm">No tactics configured.</div>
+                    <div className="text-center text-zinc-500 text-sm">No tactics configured.</div>
                   )}
                 </div>
               </div>

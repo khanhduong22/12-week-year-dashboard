@@ -11,16 +11,22 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 
+export type Indicator = {
+  id: number;
+  name: string;
+  type: string;
+  targetCount?: number;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+};
+
 export type Tactic = { 
   id: number; 
   name: string; 
   category: string; 
   weight: number; 
-  targetCount?: number;
-  indicatorType?: string;
-  targetValue?: number;
-  currentValue?: number;
-  unit?: string;
+  indicators: Indicator[];
 };
 
 export type DailyLog = {
@@ -30,7 +36,8 @@ export type DailyLog = {
   weight?: number;
   bodyFat?: number;
   createdAt: string;
-  tactics: { tacticId: number; isCompleted: boolean }[];
+  date?: string;
+  indicators: { indicatorId: number; isCompleted: boolean }[];
 };
 
 export default function DashboardPage() {
@@ -98,24 +105,22 @@ export default function DashboardPage() {
     fetchData();
   }, [session, status]);
 
-  // Separate Tactics
-  const lagTactics = tactics.filter(t => t.indicatorType === "LAG");
-  const leadTactics = tactics.filter(t => t.indicatorType !== "LAG"); // Default to LEAD
-
+  // Separate Indicators
+  const lagIndicators = tactics.flatMap(t => 
+    (t.indicators || []).filter(i => i.type === "LAG").map(i => ({ ...i, tacticName: t.name, category: t.category }))
+  );
+  
   // Calculate Weekly Scorecard (Lead Indicators)
   // Filter logs for the CURRENT week only
   const currentWeekLogs = logs.filter(log => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(activeCycle as any)) return false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const startDate = new Date((activeCycle as any).startDate);
+    if (!activeCycle) return false;
+    const startDate = new Date(activeCycle.startDate);
     const normStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const logDate = new Date((log as any).date || log.createdAt);
+    const logDate = new Date(log.date || log.createdAt);
     const normLog = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
     
-    if (normLog < normStart) return false; // Ignore logs from before the cycle started
+    if (normLog < normStart) return false;
     
     const diffDays = Math.floor((normLog - normStart) / (1000 * 60 * 60 * 24));
     const logWeek = Math.floor(diffDays / 7) + 1;
@@ -123,14 +128,26 @@ export default function DashboardPage() {
     return logWeek === currentWeek;
   });
 
-  const tacticProgress = leadTactics.map((t) => {
-    const completedCount = currentWeekLogs.filter((log) =>
-      log.tactics?.some((lt) => lt.tacticId === t.id && lt.isCompleted),
-    ).length;
+  // Since weight is on the Tactic level, we calculate Tactic completion based on its LEAD indicators.
+  // A tactic is "completed" on a day if ALL its LEAD indicators are completed.
+  const tacticProgress = tactics.map((t) => {
+    const leadInds = (t.indicators || []).filter(i => i.type === "LEAD");
+    if (leadInds.length === 0) return { tacticId: t.id, completed: 0, total: 1 };
+    
+    // Average target count of its lead indicators (usually they should be similar, e.g. 7 days/week)
+    const total = Math.max(...leadInds.map(i => i.targetCount || 7));
+    
+    const completedCount = currentWeekLogs.filter((log) => {
+      // Check if ALL lead indicators for this tactic are completed in this log
+      return leadInds.every(ind => 
+        log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted)
+      );
+    }).length;
+
     return {
       tacticId: t.id,
       completed: completedCount,
-      total: t.targetCount || 7, // Provide target count for completeness
+      total: total,
     };
   });
 
@@ -138,10 +155,12 @@ export default function DashboardPage() {
   let totalPossibleWeight = 0;
   let earnedWeight = 0;
 
-  if (currentWeekLogs.length > 0 || leadTactics.length > 0) {
-    leadTactics.forEach((t) => {
+  const tacticsWithLeads = tactics.filter(t => (t.indicators || []).some(i => i.type === "LEAD"));
+
+  if (currentWeekLogs.length > 0 || tacticsWithLeads.length > 0) {
+    tacticsWithLeads.forEach((t) => {
       const progress = tacticProgress.find((p) => p.tacticId === t.id);
-      const targetPerWeek = t.targetCount || 7;
+      const targetPerWeek = progress?.total || 7;
       const completionRate = Math.min(
         1,
         (progress?.completed || 0) / targetPerWeek,
@@ -232,13 +251,13 @@ export default function DashboardPage() {
 
         {/* Vision Board for Lag Indicators */}
         <div id="tour-vision">
-          <VisionBoard lagTactics={lagTactics} />
+          <VisionBoard lagIndicators={lagIndicators} />
         </div>
 
         <div id="tour-bsc">
           {activeCycle && (
             <BscGrid 
-              tactics={leadTactics} 
+              tactics={tactics} 
               logs={logs} 
               currentWeek={currentWeek} 
               startDate={activeCycle.startDate} 
@@ -250,7 +269,7 @@ export default function DashboardPage() {
           id="tour-scorecard"
           className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         >
-          <ScorecardChecklist tactics={leadTactics} progress={tacticProgress} />
+          <ScorecardChecklist tactics={tacticsWithLeads} progress={tacticProgress} />
           <EnergyChart logs={logs} />
         </div>
 

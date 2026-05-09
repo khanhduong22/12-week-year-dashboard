@@ -1,37 +1,37 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, TrendingUp } from "lucide-react";
-import type { Tactic } from "./ScorecardChecklist";
+import type { Indicator } from "@/app/dashboard/page";
 
 interface VisionBoardProps {
-  lagTactics: Tactic[];
+  lagIndicators: (Indicator & { tacticName?: string; category?: string })[];
 }
 
-export function VisionBoard({ lagTactics }: VisionBoardProps) {
-  if (lagTactics.length === 0) return null;
+export function VisionBoard({ lagIndicators }: VisionBoardProps) {
+  if (lagIndicators.length === 0) return null;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      {lagTactics.map((tactic) => {
-        const targetValue = tactic.targetValue || 0;
-        const currentValue = tactic.currentValue || 0;
-        const unit = tactic.unit || "";
+      {lagIndicators.map((indicator) => {
+        const targetValue = indicator.targetValue || 0;
+        const currentValue = indicator.currentValue || 0;
+        const unit = indicator.unit || "";
         const percentage = targetValue > 0 
           ? Math.min(Math.round((currentValue / targetValue) * 100), 100) 
           : 0;
 
         return (
-          <Card key={tactic.id} className="bg-background/50 backdrop-blur-sm border-white/10 shadow-lg relative overflow-hidden group">
+          <Card key={indicator.id} className="bg-background/50 backdrop-blur-sm border-white/10 shadow-lg relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-bold flex items-start justify-between gap-4">
-                <span className="text-zinc-100 leading-tight">{tactic.name}</span>
+                <span className="text-zinc-100 leading-tight">{indicator.name}</span>
                 <Target className="w-5 h-5 text-indigo-400 shrink-0" />
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
-                  {tactic.category}
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 truncate max-w-[150px]">
+                  {indicator.tacticName}
                 </span>
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
                   Lag Indicator
                 </span>
               </div>

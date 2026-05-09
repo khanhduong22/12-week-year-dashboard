@@ -6,17 +6,22 @@ import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 
+type Indicator = {
+  id: number;
+  name: string;
+  type: string;
+  targetCount?: number;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+};
 type Tactic = { 
   id: number; 
   name: string; 
   category: string; 
   weight: number; 
-  targetCount: number; 
   cycleId: number;
-  indicatorType?: string;
-  targetValue?: number;
-  currentValue?: number;
-  unit?: string;
+  indicators: Indicator[];
 };
 type Cycle = { 
   id: number; 
@@ -95,25 +100,29 @@ export default function ConfigPage() {
               name: t.name, 
               category: t.category, 
               weight: t.weight, 
-              targetCount: t.targetCount, 
               cycleId: activeCycle.id,
-              indicatorType: t.indicatorType,
-              targetValue: t.targetValue,
-              currentValue: t.currentValue,
-              unit: t.unit
+              indicators: {
+                create: t.indicators.map(ind => ({
+                  name: ind.name,
+                  type: ind.type,
+                  targetCount: ind.targetCount,
+                  targetValue: ind.targetValue,
+                  currentValue: ind.currentValue,
+                  unit: ind.unit
+                }))
+              }
             })
           });
         } else {
+          // Update tactic weight
           await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/tactics/${t.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              weight: t.weight, 
-              targetCount: t.targetCount,
-              targetValue: t.targetValue,
-              currentValue: t.currentValue
-            })
+            body: JSON.stringify({ weight: t.weight })
           }).catch(() => {});
+          
+          // Note: Full UI for editing individual indicator targets is complex.
+          // For now, we rely on AI planner to set them up, and only allow adjusting Tactic weight here.
         }
       }
       
@@ -165,17 +174,24 @@ export default function ConfigPage() {
 
   const handleAddTactic = () => {
     if (!newTacticName.trim() || !activeCycle) return;
+    
+    const newIndicator: Indicator = {
+      id: -Date.now() - 1,
+      name: `Default ${newTacticIndicatorType} for ${newTacticName}`,
+      type: newTacticIndicatorType,
+      targetCount: newTacticIndicatorType === "LEAD" ? newTacticTargetCount : undefined,
+      targetValue: newTacticIndicatorType === "LAG" ? newTacticTargetValue : undefined,
+      currentValue: newTacticIndicatorType === "LAG" ? 0 : undefined,
+      unit: newTacticIndicatorType === "LAG" ? newTacticUnit : undefined,
+    };
+
     const newTactic: Tactic = {
       id: -Date.now(), // temporary negative ID
       name: newTacticName,
       category: newTacticCategory,
       weight: newTacticWeight,
-      targetCount: newTacticTargetCount,
       cycleId: activeCycle.id,
-      indicatorType: newTacticIndicatorType,
-      targetValue: newTacticIndicatorType === "LAG" ? newTacticTargetValue : undefined,
-      currentValue: newTacticIndicatorType === "LAG" ? 0 : undefined,
-      unit: newTacticIndicatorType === "LAG" ? newTacticUnit : undefined,
+      indicators: [newIndicator]
     };
     
     setActiveCycle({
@@ -213,22 +229,6 @@ export default function ConfigPage() {
     setActiveCycle({
       ...activeCycle,
       tactics: activeCycle.tactics.map(t => t.id === id ? { ...t, weight: val } : t)
-    });
-  };
-
-  const updateTargetCount = (id: number, val: number) => {
-    if (!activeCycle) return;
-    setActiveCycle({
-      ...activeCycle,
-      tactics: activeCycle.tactics.map(t => t.id === id ? { ...t, targetCount: val } : t)
-    });
-  };
-
-  const updateCurrentValue = (id: number, val: number) => {
-    if (!activeCycle) return;
-    setActiveCycle({
-      ...activeCycle,
-      tactics: activeCycle.tactics.map(t => t.id === id ? { ...t, currentValue: val } : t)
     });
   };
 
@@ -511,8 +511,8 @@ export default function ConfigPage() {
                         </div>
                         <div className="text-right flex-shrink-0 flex items-center gap-4">
                           <div className="text-center">
-                            <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Target</div>
-                            <div className="text-xl font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg">{t.targetCount}<span className="text-xs font-normal text-zinc-500 ml-1">x/wk</span></div>
+                            <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Indicators</div>
+                            <div className="text-xl font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-lg">{(t.indicators || []).length}</div>
                           </div>
                           <div className="text-center">
                             <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Weight</div>
@@ -527,7 +527,7 @@ export default function ConfigPage() {
                       <div className="pt-4 border-t border-white/5 space-y-4">
                         <div>
                           <div className="flex justify-between mb-2">
-                            <label className="text-xs font-medium text-zinc-400">Adjust Weight (Impact)</label>
+                            <label className="text-xs font-medium text-zinc-400">Adjust Tactic Weight (Impact)</label>
                             <span className="text-xs font-bold text-emerald-400">{t.weight}</span>
                           </div>
                           <input
@@ -540,37 +540,22 @@ export default function ConfigPage() {
                             className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                           />
                         </div>
-                        {t.indicatorType === "LAG" ? (
-                          <div>
-                            <div className="flex justify-between mb-2">
-                              <label className="text-xs font-medium text-zinc-400">Update Current Value ({t.unit})</label>
-                              <span className="text-xs font-bold text-indigo-400">{t.currentValue} / {t.targetValue}</span>
-                            </div>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={t.currentValue}
-                              onChange={(e) => updateCurrentValue(t.id, parseFloat(e.target.value) || 0)}
-                              className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            />
+                        
+                        <div className="space-y-2 mt-4">
+                          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Indicators List</label>
+                          <div className="space-y-2">
+                            {(t.indicators || []).map(ind => (
+                              <div key={ind.id} className="flex justify-between items-center bg-zinc-950/50 p-2 rounded-lg border border-white/5">
+                                <span className="text-sm font-medium text-zinc-300 truncate mr-2">{ind.name}</span>
+                                {ind.type === "LEAD" ? (
+                                  <span className="text-xs font-bold bg-zinc-800 text-blue-400 px-2 py-1 rounded">{ind.targetCount}x / tuần</span>
+                                ) : (
+                                  <span className="text-xs font-bold bg-zinc-800 text-indigo-400 px-2 py-1 rounded">Mục tiêu: {ind.targetValue} {ind.unit}</span>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        ) : (
-                          <div>
-                            <div className="flex justify-between mb-2">
-                              <label className="text-xs font-medium text-zinc-400">Adjust Target (Days/Week)</label>
-                              <span className="text-xs font-bold text-blue-400">{t.targetCount}x</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="7"
-                              step="1"
-                              value={t.targetCount}
-                              onChange={(e) => updateTargetCount(t.id, parseInt(e.target.value, 10))}
-                              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                            />
-                          </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   ))}
