@@ -50,10 +50,15 @@ export function AiGoalPlanner() {
         bufferBlockDesc: data.bufferBlockDesc,
         breakoutBlockDesc: data.breakoutBlockDesc,
         tactics: {
-          create: data.tactics.map((t: { name: string; category: string; weight: number }) => ({
+          create: data.tactics.map((t: { name: string; category: string; weight: number; indicatorType: string; targetCount: number; targetValue?: number; unit?: string }) => ({
             name: t.name,
             category: t.category,
-            weight: t.weight
+            weight: t.weight,
+            indicatorType: t.indicatorType || "LEAD",
+            targetCount: t.targetCount || 7,
+            targetValue: t.targetValue || null,
+            currentValue: t.indicatorType === "LAG" ? 0 : null,
+            unit: t.unit || null
           }))
         }
       };
