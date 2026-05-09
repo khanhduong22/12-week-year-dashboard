@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, Save, Plus, Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe, Sparkles, CheckCircle2, Play, XCircle } from "lucide-react";
+import { ChevronLeft, Save, Plus, Target, Heart, Briefcase, Coins, Users, BookOpen, Gamepad2, Home, Globe, Sparkles, CheckCircle2, Play, XCircle, Trash2, Edit2, Check, X } from "lucide-react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useAuthFetch } from "@/lib/useAuthFetch";
@@ -34,6 +34,176 @@ type Cycle = {
   breakoutBlockDesc?: string;
   tactics: Tactic[] 
 };
+
+function TacticItem({ tactic, onUpdate, onDelete, getCategoryColor, getCategoryIcon }: { tactic: Tactic, onUpdate: (t: Tactic) => void, onDelete: (id: number) => void, getCategoryColor: (cat: string) => string, getCategoryIcon: (cat: string) => React.ReactNode }) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [addingIndicator, setAddingIndicator] = useState<"LEAD" | "LAG" | null>(null);
+  
+  const [formName, setFormName] = useState("");
+  const [formCount, setFormCount] = useState(7);
+  const [formValue, setFormValue] = useState<number | "">("");
+  const [formUnit, setFormUnit] = useState("");
+
+  const handleEdit = (ind: Indicator) => {
+    setEditingId(ind.id);
+    setFormName(ind.name);
+    setFormCount(ind.targetCount || 7);
+    setFormValue(ind.targetValue || "");
+    setFormUnit(ind.unit || "");
+    setAddingIndicator(null);
+  };
+
+  const handleSaveEdit = () => {
+    onUpdate({
+      ...tactic,
+      indicators: tactic.indicators.map(ind => ind.id === editingId ? {
+        ...ind,
+        name: formName,
+        targetCount: ind.type === "LEAD" ? formCount : undefined,
+        targetValue: ind.type === "LAG" ? (Number(formValue) || 0) : undefined,
+        unit: ind.type === "LAG" ? formUnit : undefined,
+      } : ind)
+    });
+    setEditingId(null);
+  };
+
+  const handleDeleteInd = (id: number) => {
+    if (!confirm("Delete this indicator?")) return;
+    onUpdate({
+      ...tactic,
+      indicators: tactic.indicators.filter(ind => ind.id !== id)
+    });
+  };
+
+  const handleAddSubmit = () => {
+    if (!addingIndicator || !formName.trim()) return;
+    const newInd: Indicator = {
+      id: -Date.now(),
+      name: formName,
+      type: addingIndicator,
+      targetCount: addingIndicator === "LEAD" ? formCount : undefined,
+      targetValue: addingIndicator === "LAG" ? (Number(formValue) || 0) : undefined,
+      unit: addingIndicator === "LAG" ? formUnit : undefined,
+    };
+    onUpdate({
+      ...tactic,
+      indicators: [...tactic.indicators, newInd]
+    });
+    setAddingIndicator(null);
+  };
+
+  return (
+    <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-semibold text-zinc-100">{tactic.name}</h3>
+          <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider ${getCategoryColor(tactic.category)}`}>
+            {getCategoryIcon(tactic.category)}
+            {tactic.category}
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0 flex items-center gap-4">
+          <div className="text-center">
+            <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Indicators</div>
+            <div className="text-xl font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-lg">{(tactic.indicators || []).length}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Weight</div>
+            <div className="text-xl font-bold text-white bg-zinc-800 px-3 py-1 rounded-lg">{tactic.weight}</div>
+          </div>
+          <button onClick={() => onDelete(tactic.id)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-2">
+            <XCircle className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      
+      <div className="pt-4 border-t border-white/5 space-y-4">
+        <div>
+          <div className="flex justify-between mb-2">
+            <label className="text-xs font-medium text-zinc-400">Adjust Tactic Weight (Impact)</label>
+            <span className="text-xs font-bold text-emerald-400">{tactic.weight}</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            value={tactic.weight}
+            onChange={(e) => onUpdate({ ...tactic, weight: parseInt(e.target.value, 10) })}
+            className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+          />
+        </div>
+        
+        <div className="space-y-2 mt-4">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Indicators List</label>
+            <div className="flex gap-2">
+              <button onClick={() => { setAddingIndicator("LEAD"); setFormName(""); setFormCount(7); }} className="text-[10px] font-bold bg-blue-500/20 text-blue-400 px-2 py-1 rounded hover:bg-blue-500/30">
+                + LEAD
+              </button>
+              <button onClick={() => { setAddingIndicator("LAG"); setFormName(""); setFormValue(0); setFormUnit(""); }} className="text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded hover:bg-indigo-500/30">
+                + LAG
+              </button>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            {(tactic.indicators || []).map(ind => (
+              <div key={ind.id} className="group flex justify-between items-center bg-zinc-950/50 p-2 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                {editingId === ind.id ? (
+                  <div className="flex-1 flex items-center gap-2 mr-2">
+                    <input autoFocus value={formName} onChange={e => setFormName(e.target.value)} className="flex-1 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white" placeholder="Name" />
+                    {ind.type === "LEAD" ? (
+                      <input type="number" min="1" max="7" value={formCount} onChange={e => setFormCount(parseInt(e.target.value)||1)} className="w-16 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white text-center" />
+                    ) : (
+                      <>
+                        <input type="number" value={formValue} onChange={e => setFormValue(parseFloat(e.target.value)||0)} className="w-20 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white text-center" placeholder="Value" />
+                        <input value={formUnit} onChange={e => setFormUnit(e.target.value)} className="w-16 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white text-center" placeholder="Unit" />
+                      </>
+                    )}
+                    <button onClick={handleSaveEdit} className="p-1 text-green-400 hover:bg-green-400/20 rounded"><Check className="w-4 h-4"/></button>
+                    <button onClick={() => setEditingId(null)} className="p-1 text-zinc-500 hover:bg-zinc-800 rounded"><X className="w-4 h-4"/></button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium text-zinc-300 truncate mr-2">{ind.name}</span>
+                    <div className="flex items-center gap-2">
+                      {ind.type === "LEAD" ? (
+                        <span className="text-xs font-bold bg-zinc-800 text-blue-400 px-2 py-1 rounded">{ind.targetCount}x / tuần</span>
+                      ) : (
+                        <span className="text-xs font-bold bg-zinc-800 text-indigo-400 px-2 py-1 rounded">Mục tiêu: {ind.targetValue} {ind.unit}</span>
+                      )}
+                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                        <button onClick={() => handleEdit(ind)} className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded"><Edit2 className="w-3.5 h-3.5"/></button>
+                        <button onClick={() => handleDeleteInd(ind.id)} className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/20 rounded"><Trash2 className="w-3.5 h-3.5"/></button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+            
+            {addingIndicator && (
+              <div className="flex items-center gap-2 bg-zinc-900/80 p-2 rounded-lg border border-emerald-500/50 mt-2">
+                <input autoFocus value={formName} onChange={e => setFormName(e.target.value)} className="flex-1 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white" placeholder={`New ${addingIndicator} Indicator`} />
+                {addingIndicator === "LEAD" ? (
+                  <input type="number" min="1" max="7" value={formCount} onChange={e => setFormCount(parseInt(e.target.value)||1)} className="w-16 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white text-center" />
+                ) : (
+                  <>
+                    <input type="number" value={formValue} onChange={e => setFormValue(parseFloat(e.target.value)||0)} className="w-20 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white text-center" placeholder="Value" />
+                    <input value={formUnit} onChange={e => setFormUnit(e.target.value)} className="w-16 bg-zinc-800 text-sm px-2 py-1 rounded outline-none text-white text-center" placeholder="Unit" />
+                  </>
+                )}
+                <button onClick={handleAddSubmit} className="p-1 text-emerald-400 hover:bg-emerald-400/20 rounded"><Check className="w-4 h-4"/></button>
+                <button onClick={() => setAddingIndicator(null)} className="p-1 text-zinc-500 hover:bg-zinc-800 rounded"><X className="w-4 h-4"/></button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ConfigPage() {
   const authFetch = useAuthFetch();
@@ -224,11 +394,11 @@ export default function ConfigPage() {
     });
   };
 
-  const updateWeight = (id: number, val: number) => {
+  const updateTactic = (updatedTactic: Tactic) => {
     if (!activeCycle) return;
     setActiveCycle({
       ...activeCycle,
-      tactics: activeCycle.tactics.map(t => t.id === id ? { ...t, weight: val } : t)
+      tactics: activeCycle.tactics.map(t => t.id === updatedTactic.id ? updatedTactic : t)
     });
   };
 
@@ -500,64 +670,14 @@ export default function ConfigPage() {
 
                 <div className="space-y-3">
                   {activeCycle.tactics.map((t) => (
-                    <div key={t.id} className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h3 className="font-semibold text-zinc-100">{t.name}</h3>
-                          <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider ${getCategoryColor(t.category)}`}>
-                            {getCategoryIcon(t.category)}
-                            {t.category}
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0 flex items-center gap-4">
-                          <div className="text-center">
-                            <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Indicators</div>
-                            <div className="text-xl font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-lg">{(t.indicators || []).length}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">Weight</div>
-                            <div className="text-xl font-bold text-white bg-zinc-800 px-3 py-1 rounded-lg">{t.weight}</div>
-                          </div>
-                          <button onClick={() => handleDeleteTactic(t.id)} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-2">
-                            <XCircle className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="pt-4 border-t border-white/5 space-y-4">
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <label className="text-xs font-medium text-zinc-400">Adjust Tactic Weight (Impact)</label>
-                            <span className="text-xs font-bold text-emerald-400">{t.weight}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="1"
-                            max="5"
-                            step="1"
-                            value={t.weight}
-                            onChange={(e) => updateWeight(t.id, parseInt(e.target.value, 10))}
-                            className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2 mt-4">
-                          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Indicators List</label>
-                          <div className="space-y-2">
-                            {(t.indicators || []).map(ind => (
-                              <div key={ind.id} className="flex justify-between items-center bg-zinc-950/50 p-2 rounded-lg border border-white/5">
-                                <span className="text-sm font-medium text-zinc-300 truncate mr-2">{ind.name}</span>
-                                {ind.type === "LEAD" ? (
-                                  <span className="text-xs font-bold bg-zinc-800 text-blue-400 px-2 py-1 rounded">{ind.targetCount}x / tuần</span>
-                                ) : (
-                                  <span className="text-xs font-bold bg-zinc-800 text-indigo-400 px-2 py-1 rounded">Mục tiêu: {ind.targetValue} {ind.unit}</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <TacticItem 
+                      key={t.id} 
+                      tactic={t} 
+                      onUpdate={updateTactic} 
+                      onDelete={handleDeleteTactic} 
+                      getCategoryColor={getCategoryColor} 
+                      getCategoryIcon={getCategoryIcon} 
+                    />
                   ))}
                 </div>
               </section>
@@ -790,18 +910,38 @@ export default function ConfigPage() {
             
             <div className="space-y-3 mb-8">
               {selectedDraft.tactics.map(t => (
-                <div key={t.id} className="bg-zinc-900/50 rounded-xl p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="font-semibold text-zinc-200">{t.name}</h4>
-                    <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider ${getCategoryColor(t.category)}`}>
-                      {getCategoryIcon(t.category)}
-                      {t.category}
+                <div key={t.id} className="bg-zinc-900/50 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold text-zinc-200">{t.name}</h4>
+                      <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold uppercase tracking-wider ${getCategoryColor(t.category)}`}>
+                        {getCategoryIcon(t.category)}
+                        {t.category}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-center">
+                      <div className="text-xs text-zinc-500 font-medium mb-1">Weight</div>
+                      <div className="text-xl font-bold text-white bg-zinc-800 w-10 h-10 rounded-lg flex items-center justify-center">{t.weight}</div>
                     </div>
                   </div>
-                  <div className="flex-shrink-0 text-center">
-                    <div className="text-xs text-zinc-500 font-medium mb-1">Weight</div>
-                    <div className="text-xl font-bold text-white bg-zinc-800 w-10 h-10 rounded-lg flex items-center justify-center">{t.weight}</div>
-                  </div>
+                  
+                  {t.indicators && t.indicators.length > 0 && (
+                    <div className="pt-3 border-t border-white/5 space-y-2">
+                      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Indicators List</label>
+                      <div className="space-y-2">
+                        {t.indicators.map(ind => (
+                          <div key={ind.id} className="flex justify-between items-center bg-zinc-950/50 p-2 rounded-lg border border-white/5">
+                            <span className="text-sm font-medium text-zinc-300 truncate mr-2">{ind.name}</span>
+                            {ind.type === "LEAD" ? (
+                              <span className="text-xs font-bold bg-zinc-800 text-blue-400 px-2 py-1 rounded">{ind.targetCount}x / tuần</span>
+                            ) : (
+                              <span className="text-xs font-bold bg-zinc-800 text-indigo-400 px-2 py-1 rounded">Mục tiêu: {ind.targetValue} {ind.unit}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
