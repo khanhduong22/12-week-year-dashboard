@@ -55,10 +55,10 @@ export function AiGoalPlanner() {
             category: t.category,
             weight: t.weight,
             indicatorType: t.indicatorType || "LEAD",
-            targetCount: t.targetCount || 7,
-            targetValue: t.targetValue || null,
+            targetCount: t.targetCount ? parseInt(String(t.targetCount), 10) : 7,
+            targetValue: t.targetValue !== undefined && t.targetValue !== null ? parseFloat(String(t.targetValue)) : null,
             currentValue: t.indicatorType === "LAG" ? 0 : null,
-            unit: t.unit || null
+            unit: t.unit ? String(t.unit) : null
           }))
         }
       };
@@ -72,7 +72,9 @@ export function AiGoalPlanner() {
       });
 
       if (!cycleResponse.ok) {
-        throw new Error("Failed to save the generated plan.");
+        const errorText = await cycleResponse.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`Failed to save: ${errorText}`);
       }
       
       setIsSaving(false);
