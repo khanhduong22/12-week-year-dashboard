@@ -1,0 +1,78 @@
+name: Deploy Dashboard to VPS
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch: # Dùng manual trigger tạm thời trong lúc vẫn đang dùng Vercel
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Dashboard Container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/12-week-year-deploy/12-week-year-dashboard
+            git pull origin main
+            
+            # Rebuild image before scaling
+            docker compose build dashboard
+            
+            echo "🔄 Starting production rolling deployment..."
+            
+            # Capture current (old) dashboard container(s) before scaling
+            OLD_DASHBOARD_CONTAINERS=$(docker compose ps -q dashboard || true)
+            echo "Old dashboard containers (before scale):"
+            echo "$OLD_DASHBOARD_CONTAINERS" || true
+            
+            # Deploy dashboard service with zero-downtime using scale strategy
+            echo "=========================================="
+            echo "Deploying dashboard with rolling update..."
+            echo "=========================================="
+            
+            # Step 1: Scale up to 2 instances (old + new)
+            echo "📦 Scaling up dashboard to 2 instances..."
+            docker compose up -d --scale dashboard=2 --no-recreate dashboard
+            
+            # Step 2: Wait for new instance to be healthy/started
+            echo "⏳ Waiting for new dashboard instance to start..."
+            sleep 15
+            
+            # Identify the new container
+            echo "🔎 Identifying new dashboard container..."
+            ALL_DASHBOARD_CONTAINERS=$(docker compose ps -q dashboard)
+            NEW_DASHBOARD_CONTAINER=""
+            for c in $ALL_DASHBOARD_CONTAINERS; do
+              if ! echo "$OLD_DASHBOARD_CONTAINERS" | grep -q "$c"; then
+                NEW_DASHBOARD_CONTAINER="$c"
+                break
+              fi
+            done
+            if [ -z "$NEW_DASHBOARD_CONTAINER" ]; then
+              echo "⚠️ Could not reliably detect new container (fallback to first)."
+              NEW_DASHBOARD_CONTAINER=$(echo "$ALL_DASHBOARD_CONTAINERS" | head -n 1)
+            fi
+            echo "New dashboard container: $NEW_DASHBOARD_CONTAINER"
+            
+            # Step 3: Stop/remove old dashboard container(s)
+            if [ -n "$OLD_DASHBOARD_CONTAINERS" ]; then
+              echo "🧹 Removing old dashboard container(s)..."
+              for old in $OLD_DASHBOARD_CONTAINERS; do
+                if [ -n "$old" ] && [ "$old" != "$NEW_DASHBOARD_CONTAINER" ]; then
+                  docker rm -f "$old" || true
+                fi
+              done
+            fi
+            
+            # Step 4: Ensure service scaled back to 1 (new one)
+            echo "📉 Ensuring dashboard scaled down to 1..."
+            docker compose up -d --scale dashboard=1 --no-recreate dashboard

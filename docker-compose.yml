@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: 12wy_dashboard
     environment:
       - NEXT_PUBLIC_API_URL=https://12wy-api.khanhdp.com
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
