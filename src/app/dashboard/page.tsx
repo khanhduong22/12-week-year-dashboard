@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CountdownHeader } from "@/components/dashboard/CountdownHeader";
+import { SuperCycle } from "@/components/dashboard/SuperCycle";
 import { BscGrid } from "@/components/dashboard/BscGrid";
 import { VisionBoard } from "@/components/dashboard/VisionBoard";
 import { ScorecardChecklist } from "@/components/dashboard/ScorecardChecklist";
@@ -246,6 +247,8 @@ export default function DashboardPage() {
             to hit the gas!
           </div>
         )}
+
+        <SuperCycle />
 
         <CountdownHeader currentWeek={currentWeek} totalWeeks={12} currentDay={currentDay} />
 
