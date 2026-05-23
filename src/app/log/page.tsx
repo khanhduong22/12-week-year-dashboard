@@ -484,11 +484,15 @@ export default function DailyLogPage() {
                       }))
                     }
                   };
-                  await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
+                  const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                   });
+                  
+                  if (!res.ok) {
+                    throw new Error(`Server returned status: ${res.status}`);
+                  }
                   
                   // Update local state without reloading
                   const newLogsRes = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`);

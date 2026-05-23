@@ -116,11 +116,15 @@ export default function WidgetPage() {
         }
       };
       
-      await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      
+      if (!res.ok) {
+        throw new Error(`Server returned status: ${res.status}`);
+      }
       
       // Flash green to indicate save
       const bg = document.body.style.backgroundColor;
