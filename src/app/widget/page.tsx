@@ -5,6 +5,7 @@ import { CheckCircle2, Save, Target, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useAuthFetch } from "@/lib/useAuthFetch";
+import { useSession } from "next-auth/react";
 
 type Tactic = { id: number; name: string; category: string; weight: number; indicatorType: string; cycleId: number };
 type DailyLog = {
@@ -20,6 +21,7 @@ type DailyLog = {
 type CycleData = { id: number; startDate: string; endDate: string; tactics: Tactic[] };
 
 export default function WidgetPage() {
+  const { data: session, status } = useSession();
   const authFetch = useAuthFetch();
   const [cycleData, setCycleData] = useState<CycleData | null>(null);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
@@ -34,6 +36,7 @@ export default function WidgetPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (status !== "authenticated" || !session) return;
       try {
         const [cycleRes, logsRes] = await Promise.all([
           authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
@@ -91,7 +94,7 @@ export default function WidgetPage() {
       }
     };
     fetchData();
-  }, [authFetch]);
+  }, [authFetch, session, status]);
 
   const handleSave = async () => {
     if (!cycleData) return;

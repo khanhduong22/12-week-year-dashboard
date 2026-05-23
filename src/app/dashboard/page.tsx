@@ -104,7 +104,7 @@ export default function DashboardPage() {
       }
     };
     fetchData();
-  }, [session, status]);
+  }, [session, status, authFetch]);
 
   // Separate Indicators
   const lagIndicators = tactics.flatMap(t => 

@@ -76,7 +76,7 @@ export default function HistoryPage() {
       }
     };
     fetchData();
-  }, [session, status]);
+  }, [session, status, authFetch]);
 
   const isSameDay = (d1: Date, d2: Date) => {
     return d1.getFullYear() === d2.getFullYear() &&

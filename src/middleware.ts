@@ -13,6 +13,7 @@ export const config = {
     "/config",
     "/log",
     "/history",
+    "/widget",
     // Protect api routes except auth
     "/api/((?!auth).*)"
   ]

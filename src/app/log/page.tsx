@@ -155,7 +155,7 @@ export default function DailyLogPage() {
       }
     };
     fetchData();
-  }, [session, status]);
+  }, [session, status, authFetch]);
 
   useEffect(() => {
     if (allLogs.length > 0 || tacticsList.length > 0) {
