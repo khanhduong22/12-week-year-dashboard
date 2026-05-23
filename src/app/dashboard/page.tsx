@@ -273,7 +273,7 @@ export default function DashboardPage() {
           className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         >
           <ScorecardChecklist tactics={tacticsWithLeads} currentWeekLogs={currentWeekLogs} />
-          <EnergyChart logs={logs} />
+          <EnergyChart logs={logs} tactics={tactics} activeCycle={activeCycle} />
         </div>
 
         <OnboardingTour />
