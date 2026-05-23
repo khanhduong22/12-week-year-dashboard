@@ -272,7 +272,7 @@ export default function DashboardPage() {
           id="tour-scorecard"
           className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         >
-          <ScorecardChecklist tactics={tacticsWithLeads} progress={tacticProgress} />
+          <ScorecardChecklist tactics={tacticsWithLeads} currentWeekLogs={currentWeekLogs} />
           <EnergyChart logs={logs} />
         </div>
 

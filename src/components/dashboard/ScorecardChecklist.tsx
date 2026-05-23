@@ -1,15 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info } from "lucide-react";
 
-import type { Tactic } from "@/app/dashboard/page";
-export type TacticProgress = { tacticId: number; completed: number; total: number };
+import type { Tactic, DailyLog } from "@/app/dashboard/page";
 
 interface ScorecardChecklistProps {
   tactics: Tactic[];
-  progress: TacticProgress[];
+  currentWeekLogs: DailyLog[];
 }
 
-export function ScorecardChecklist({ tactics, progress }: ScorecardChecklistProps) {
+export function ScorecardChecklist({ tactics, currentWeekLogs }: ScorecardChecklistProps) {
   return (
     <Card className="bg-background/50 backdrop-blur-sm border-white/10 shadow-lg relative overflow-visible z-10">
       <CardHeader>
@@ -21,8 +20,8 @@ export function ScorecardChecklist({ tactics, progress }: ScorecardChecklistProp
               <p className="font-bold text-white mb-2 text-sm">Chấm điểm 12WY (Strict Scoring):</p>
               <p className="mb-2">12 Week Year <strong>không có điểm vớt (partial credit)</strong>. Bạn chỉ có Đạt (100%) hoặc Thất bại (0%).</p>
               <ul className="space-y-1 list-disc pl-4 text-zinc-400">
-                <li>Thanh Progress Bar giúp bạn tracking tiến độ hàng ngày (ví dụ: đã đi bộ 3/7 ngày).</li>
-                <li>Đến cuối tuần, nếu thanh Progress không đạt mức tối đa, Tactic đó bị tính là 0 điểm. Cố lên nhé!</li>
+                <li>Thanh Progress Bar giúp bạn tracking tiến độ của từng chỉ số hành động Lead Indicator.</li>
+                <li>Đến cuối tuần, nếu một Lead Indicator chưa đạt chỉ tiêu (ví dụ: 3/5), Tactic của nó sẽ bị tính là 0 điểm khi tính Execution Score tổng. Cố lên nhé!</li>
               </ul>
             </div>
           </div>
@@ -36,22 +35,37 @@ export function ScorecardChecklist({ tactics, progress }: ScorecardChecklistProp
           <div className="text-sm text-zinc-500">No tactics configured. Go to Config to add some.</div>
         ) : (
           tactics.map((tactic) => {
-            const p = progress.find(p => p.tacticId === tactic.id);
-            const completed = p?.completed || 0;
-            const target = p?.total || 7;
-            const percentage = Math.min(Math.round((completed / target) * 100), 100);
-            
+            const leads = (tactic.indicators || []).filter(i => i.type === "LEAD");
+            if (leads.length === 0) return null;
+
             return (
-              <div key={tactic.id} className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span className="text-zinc-200">{tactic.name}</span>
-                  <span className="text-emerald-400">{completed}/{target} times</span>
-                </div>
-                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
-                    style={{ width: `${percentage}%` }}
-                  />
+              <div key={tactic.id} className="space-y-3 p-4 rounded-xl bg-zinc-900/20 border border-white/5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  {tactic.name}
+                </h3>
+                <div className="space-y-4">
+                  {leads.map((lead) => {
+                    const completed = currentWeekLogs.filter((log) => 
+                      log.indicators?.some((li) => li.indicatorId === lead.id && li.isCompleted)
+                    ).length;
+                    const target = lead.targetCount || 7;
+                    const percentage = Math.min(Math.round((completed / target) * 100), 100);
+
+                    return (
+                      <div key={lead.id} className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-medium">
+                          <span className="text-zinc-300">{lead.name}</span>
+                          <span className="text-emerald-400 font-semibold">{completed}/{target} times</span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
