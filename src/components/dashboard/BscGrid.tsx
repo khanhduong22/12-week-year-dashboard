@@ -21,7 +21,6 @@ export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps)
     let maxPoints = 0;
     let earnedPoints = 0;
 
-    const totalWeeks = currentWeek;
 
     // Group logs into weeks (1-indexed) based on startDate
     const weeks: Record<number, DailyLog[]> = {};
@@ -45,21 +44,18 @@ export function BscGrid({ tactics, logs, currentWeek, startDate }: BscGridProps)
 
     categoryTactics.forEach(t => {
       const leadInds = (t.indicators || []).filter(i => i.type === "LEAD");
-      const target = Math.max(...leadInds.map(i => i.targetCount || 7));
       
-      // Max points is the weight * number of active weeks
-      maxPoints += t.weight * totalWeeks;
-
-      // Earned points calculated per week (strict 12WY scoring)
-      Object.values(weeks).forEach(weekLogs => {
-        const completedInWeek = weekLogs.filter(log => 
-          // A tactic is completed on a day if all its LEAD indicators are completed
-          leadInds.every(ind => log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted))
-        ).length;
+      leadInds.forEach(ind => {
+        const target = ind.targetCount || 7;
         
-        if (completedInWeek >= target) {
-          earnedPoints += t.weight;
-        }
+        Object.values(weeks).forEach(weekLogs => {
+          const completedInWeek = weekLogs.filter(log => 
+            log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted)
+          ).length;
+          
+          maxPoints += target;
+          earnedPoints += Math.min(completedInWeek, target);
+        });
       });
     });
 

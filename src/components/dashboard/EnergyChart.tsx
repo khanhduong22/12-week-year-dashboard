@@ -56,8 +56,8 @@ export function EnergyChart({ logs, tactics, activeCycle }: EnergyChartProps) {
       });
 
       // Calculate execution for each tactic
-      let totalWeight = 0;
-      let earnedWeight = 0;
+      let totalExpected = 0;
+      let totalCompleted = 0;
       const tacticScores: Record<string, number | null> = {};
 
       const hasLogs = weekLogs.length > 0;
@@ -65,29 +65,28 @@ export function EnergyChart({ logs, tactics, activeCycle }: EnergyChartProps) {
 
       tacticsWithLeads.forEach(t => {
         const leadInds = (t.indicators || []).filter(i => i.type === "LEAD");
-        const target = Math.max(...leadInds.map(i => i.targetCount || 7));
         
-        // Count days in this week where ALL lead indicators are completed
-        const completedDays = weekLogs.filter(log => 
-          leadInds.every(ind => log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted))
-        ).length;
+        const expected = leadInds.reduce((sum, ind) => sum + (ind.targetCount || 7), 0);
+        const completed = leadInds.reduce((sum, ind) => {
+          const count = weekLogs.filter(log =>
+            log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted)
+          ).length;
+          return sum + Math.min(count, ind.targetCount || 7);
+        }, 0);
 
-        const isSuccess = completedDays >= target;
-        
-        // If it's a future week and has no logs, set to null so the line breaks cleanly on the chart
+        const tacticScore = expected > 0 ? Math.round((completed / expected) * 100) : 100;
+
         if (isFutureWeek && !hasLogs) {
           tacticScores[t.name] = null;
         } else {
-          tacticScores[t.name] = isSuccess ? 100 : 0;
+          tacticScores[t.name] = tacticScore;
         }
 
-        totalWeight += t.weight;
-        if (isSuccess) {
-          earnedWeight += t.weight;
-        }
+        totalExpected += expected;
+        totalCompleted += completed;
       });
 
-      const overallScore = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 100) : 100;
+      const overallScore = totalExpected > 0 ? Math.round((totalCompleted / totalExpected) * 100) : 100;
 
       if (isFutureWeek && !hasLogs) {
         weeksData.push({

@@ -129,51 +129,26 @@ export default function DashboardPage() {
     return logWeek === currentWeek;
   });
 
-  // Since weight is on the Tactic level, we calculate Tactic completion based on its LEAD indicators.
-  // A tactic is "completed" on a day if ALL its LEAD indicators are completed.
-  const tacticProgress = tactics.map((t) => {
-    const leadInds = (t.indicators || []).filter(i => i.type === "LEAD");
-    if (leadInds.length === 0) return { tacticId: t.id, completed: 0, total: 1 };
-    
-    // Average target count of its lead indicators (usually they should be similar, e.g. 7 days/week)
-    const total = Math.max(...leadInds.map(i => i.targetCount || 7));
-    
-    const completedCount = currentWeekLogs.filter((log) => {
-      // Check if ALL lead indicators for this tactic are completed in this log
-      return leadInds.every(ind => 
-        log.indicators?.some(li => li.indicatorId === ind.id && li.isCompleted)
-      );
-    }).length;
-
-    return {
-      tacticId: t.id,
-      completed: completedCount,
-      total: total,
-    };
-  });
-
-  // Calculate total score based on weights
-  let totalPossibleWeight = 0;
-  let earnedWeight = 0;
+  // Calculate total score based on all lead indicators in the current week (unweighted action-based scoring)
+  let totalExpectedActions = 0;
+  let totalCompletedActions = 0;
 
   const tacticsWithLeads = tactics.filter(t => (t.indicators || []).some(i => i.type === "LEAD"));
 
-  if (currentWeekLogs.length > 0 || tacticsWithLeads.length > 0) {
-    tacticsWithLeads.forEach((t) => {
-      const progress = tacticProgress.find((p) => p.tacticId === t.id);
-      const targetPerWeek = progress?.total || 7;
-      const completionRate = Math.min(
-        1,
-        (progress?.completed || 0) / targetPerWeek,
-      );
-
-      totalPossibleWeight += t.weight;
-      earnedWeight += t.weight * completionRate;
+  tacticsWithLeads.forEach((t) => {
+    const leadInds = (t.indicators || []).filter(i => i.type === "LEAD");
+    leadInds.forEach((ind) => {
+      const target = ind.targetCount || 7;
+      const completed = currentWeekLogs.filter((log) => 
+        log.indicators?.some((li) => li.indicatorId === ind.id && li.isCompleted)
+      ).length;
+      
+      totalExpectedActions += target;
+      totalCompletedActions += Math.min(completed, target);
     });
-  }
+  });
 
-  const score =
-    totalPossibleWeight > 0 ? (earnedWeight / totalPossibleWeight) * 100 : 100;
+  const score = totalExpectedActions > 0 ? (totalCompletedActions / totalExpectedActions) * 100 : 100;
   const isWarning = score < 85 && currentWeekLogs.length > 0;
 
   return (
