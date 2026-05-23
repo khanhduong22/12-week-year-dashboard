@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Moon, Zap, Target, Mail, Coffee, CheckCircle
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthFetch } from "@/lib/useAuthFetch";
+import { useSession } from "next-auth/react";
 
 type BlockStatus = "failed" | "partial" | "nailed";
 type Indicator = {
@@ -39,6 +40,7 @@ type DailyLog = {
 
 export default function HistoryPage() {
   const authFetch = useAuthFetch();
+  const { data: session, status } = useSession();
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [tacticsList, setTacticsList] = useState<Tactic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,6 +52,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (status !== "authenticated" || !session) return;
       try {
         const [cycleRes, logsRes] = await Promise.all([
           authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
@@ -73,7 +76,7 @@ export default function HistoryPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [session, status]);
 
   const isSameDay = (d1: Date, d2: Date) => {
     return d1.getFullYear() === d2.getFullYear() &&

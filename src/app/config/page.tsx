@@ -5,6 +5,7 @@ import { ChevronLeft, Save, Plus, Target, Heart, Briefcase, Coins, Users, BookOp
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useAuthFetch } from "@/lib/useAuthFetch";
+import { useSession } from "next-auth/react";
 
 type Indicator = {
   id: number;
@@ -207,6 +208,7 @@ function TacticItem({ tactic, onUpdate, onDelete, getCategoryColor, getCategoryI
 
 export default function ConfigPage() {
   const authFetch = useAuthFetch();
+  const { data: session, status } = useSession();
   const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
   const [draftCycles, setDraftCycles] = useState<Cycle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -252,9 +254,11 @@ export default function ConfigPage() {
   };
 
   useEffect(() => {
-    fetchCycles();
+    if (status === "authenticated" && session) {
+      fetchCycles();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authFetch]);
+  }, [authFetch, status, session]);
 
   const handleSaveActiveTactics = async () => {
     if (!activeCycle) return;

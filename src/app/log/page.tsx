@@ -6,11 +6,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthFetch } from "@/lib/useAuthFetch";
+import { useSession } from "next-auth/react";
 
 // Types
 type BlockStatus = "failed" | "partial" | "nailed";
 
 export default function DailyLogPage() {
+  const { data: session, status } = useSession();
   const authFetch = useAuthFetch();
   const [sleep, setSleep] = useState([7]);
   const [energy, setEnergy] = useState([8]);
@@ -92,6 +94,7 @@ export default function DailyLogPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (status !== "authenticated" || !session) return;
       try {
         const [cycleRes, logsRes] = await Promise.all([
           authFetch(`${process.env.NEXT_PUBLIC_API_URL}/cycles/active`),
@@ -152,7 +155,7 @@ export default function DailyLogPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [session, status]);
 
   useEffect(() => {
     if (allLogs.length > 0 || tacticsList.length > 0) {
