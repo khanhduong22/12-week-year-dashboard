@@ -198,12 +198,19 @@ export default function DashboardPage() {
               History
             </Link>
             <Link
+              href="/pomodoro-analytics"
+              className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm shadow-emerald-500/20 flex items-center gap-1.5"
+            >
+              ⏱️ Pomodoro Analytics
+            </Link>
+            <Link
               id="tour-log"
               href="/log"
               className="bg-zinc-100 hover:bg-white text-zinc-900 px-4 py-2 rounded-full font-bold shadow-sm transition-colors text-sm"
             >
               Daily Log
             </Link>
+
             <button
               onClick={() => {
                 import('next-auth/react').then(({ signOut }) => signOut());
