@@ -2,136 +2,166 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { PomodoroTimerWidget } from '@/components/pomodoro/PomodoroTimerWidget';
-import { GitHubHeatmap } from '@/components/pomodoro/GitHubHeatmap';
+import { ArrowLeft, RefreshCw, Flame } from 'lucide-react';
+import { useAuthFetch } from '@/lib/useAuthFetch';
+import { OverviewMetricsCards, OverviewMetricsProps } from '@/components/focustodo-analytics/OverviewMetricsCards';
+import { PomodoroRecordsMatrix, MatrixDay } from '@/components/focustodo-analytics/PomodoroRecordsMatrix';
+import { ProjectTimeDistribution, DistributionItem } from '@/components/focustodo-analytics/ProjectTimeDistribution';
+import { FocusGoalCalendar, CalendarDayItem } from '@/components/focustodo-analytics/FocusGoalCalendar';
+import { FocusTrendCharts, TrendPoint } from '@/components/focustodo-analytics/FocusTrendCharts';
 import { DailyActivityFeed, ActivitySession, DailyBreakdownDay } from '@/components/pomodoro/DailyActivityFeed';
-import { PomodoroFilterBar } from '@/components/pomodoro/PomodoroFilterBar';
 import { PromoteModal } from '@/components/pomodoro/PromoteModal';
+
+interface TacticRaw {
+  id?: number;
+  name?: string;
+  tactics?: Array<{ id: number; name: string }>;
+}
 
 export default function PomodoroAnalyticsPage() {
   const [mounted, setMounted] = useState(false);
-  const [range, setRange] = useState<'week' | 'month' | 'year'>('month');
+  const [loading, setLoading] = useState(false);
+
+  const authFetch = useAuthFetch();
+
+  // Data States
+  const [overviewMetrics, setOverviewMetrics] = useState<OverviewMetricsProps>({});
+  const [matrixDays, setMatrixDays] = useState<MatrixDay[]>([]);
+  const [distribution, setDistribution] = useState<DistributionItem[]>([]);
+  const [calendarData, setCalendarData] = useState<{
+    targetHours?: number;
+    focusDaysCount?: number;
+    completedGoalDaysCount?: number;
+    completionRate?: number;
+    calendarDays?: CalendarDayItem[];
+  }>({});
+  const [trendData, setTrendData] = useState<{
+    focusStats?: { topMinutes: number; avgMinutes: number; totalMinutes: number };
+    taskStats?: { topTasks: number; avgTasks: number; totalTasks: number };
+    series?: TrendPoint[];
+  }>({});
+
+  const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdownDay[]>([]);
+  const [tactics, setTactics] = useState<Array<{ id: number; name: string }>>([]);
+
+  // Promote Modal
+  const [promoteSession, setPromoteSession] = useState<ActivitySession | null>(null);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'all'>('month');
-  const [selectedTacticId, setSelectedTacticId] = useState<number | undefined>(undefined);
-  const [isUnplannedFilter, setIsUnplannedFilter] = useState<boolean | 'all'>('all');
-  const [loading, setLoading] = useState(false);
-
-  // Data states
-  const [heatmapData, setHeatmapData] = useState<{
-    days: Array<unknown>;
-    hourlyDistribution: Array<unknown>;
-    totalMinutes?: number;
-    totalSessions?: number;
-  }>({ days: [], hourlyDistribution: [] });
-  const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdownDay[]>([]);
-  const [tactics, setTactics] = useState<Array<{ id: number; name: string }>>([]);
-
-  // Promote Modal state
-  const [promoteSession, setPromoteSession] = useState<ActivitySession | null>(null);
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch Heatmap
-      const heatmapRes = await fetch(
-        `${API_URL}/analytics/heatmap?range=${range}${selectedTacticId ? `&tacticId=${selectedTacticId}` : ''}`,
-      );
+      // 1. Overview Metrics
+      const overviewRes = await authFetch(`${API_URL}/analytics/overview-metrics`);
+      if (overviewRes.ok) {
+        const text = await overviewRes.text();
+        if (text) setOverviewMetrics(JSON.parse(text));
+      }
+
+      // 2. Heatmap & Records Matrix
+      const heatmapRes = await authFetch(`${API_URL}/analytics/heatmap?range=month`);
       if (heatmapRes.ok) {
-        setHeatmapData(await heatmapRes.json());
+        const text = await heatmapRes.text();
+        if (text) {
+          const json = JSON.parse(text);
+          setMatrixDays(json.days || []);
+        }
       }
 
-      // 2. Fetch Daily Breakdown
-      const unplannedQuery = isUnplannedFilter !== 'all' ? `&isUnplanned=${isUnplannedFilter}` : '';
-      const tacticQuery = selectedTacticId ? `&tacticId=${selectedTacticId}` : '';
-      const breakdownRes = await fetch(
-        `${API_URL}/analytics/daily-breakdown?1=1${tacticQuery}${unplannedQuery}`,
-      );
+      // 3. Project Distribution
+      const distRes = await authFetch(`${API_URL}/analytics/project-distribution?timeframe=monthly`);
+      if (distRes.ok) {
+        const text = await distRes.text();
+        if (text) {
+          const json = JSON.parse(text);
+          setDistribution(json.distribution || []);
+        }
+      }
+
+      // 4. Goal Calendar
+      const calRes = await authFetch(`${API_URL}/analytics/goal-calendar?targetHours=3`);
+      if (calRes.ok) {
+        const text = await calRes.text();
+        if (text) setCalendarData(JSON.parse(text));
+      }
+
+      // 5. Trend Charts
+      const trendRes = await authFetch(`${API_URL}/analytics/trend-charts?timeframe=daily`);
+      if (trendRes.ok) {
+        const text = await trendRes.text();
+        if (text) setTrendData(JSON.parse(text));
+      }
+
+      // 6. Daily Breakdown Activity Feed
+      const breakdownRes = await authFetch(`${API_URL}/analytics/daily-breakdown`);
       if (breakdownRes.ok) {
-        const json = await breakdownRes.json();
-        setDailyBreakdown(json.days || []);
+        const text = await breakdownRes.text();
+        if (text) {
+          const json = JSON.parse(text);
+          setDailyBreakdown(json.days || []);
+        }
       }
 
-      // 3. Fetch Tactics for selector
-      const tacticsRes = await fetch(`${API_URL}/tactics`);
+      // 7. Tactics list for promote modal
+      const tacticsRes = await authFetch(`${API_URL}/tactics`);
       if (tacticsRes.ok) {
-        const data = await tacticsRes.json();
-        const flatTactics: Array<{ id: number; name: string }> = [];
-        data.forEach((item: { indicators?: Array<{ id: number; name: string; type: string }> }) => {
-          if (item.indicators) {
-            item.indicators
-              .filter((ind) => ind.type === 'LEAD')
-              .forEach((ind) => {
-                flatTactics.push({ id: ind.id, name: ind.name });
-              });
-          }
-        });
-        setTactics(flatTactics);
+        const text = await tacticsRes.text();
+        if (text) {
+          const data: TacticRaw[] = JSON.parse(text);
+          const flatTactics: Array<{ id: number; name: string }> = [];
+          (data || []).forEach((item) => {
+            if (item.tactics) flatTactics.push(...item.tactics);
+            else if (item.id && item.name) flatTactics.push({ id: item.id, name: item.name });
+          });
+          setTactics(flatTactics);
+        }
       }
     } catch (e) {
-      console.error('Error fetching analytics data:', e);
+      console.error('Error fetching analytics:', e);
     } finally {
       setLoading(false);
     }
-  }, [API_URL, range, selectedTacticId, isUnplannedFilter]);
+  }, [API_URL, authFetch]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Handle session start/complete
-  const handleSessionComplete = async (payload: {
-    title: string;
-    durationMinutes: number;
-    tacticId?: number;
-    tags: string[];
-    outputSummary: string;
-    reflectionNotes?: string;
-  }) => {
+  const handleDistributionTimeframe = async (tf: 'daily' | 'weekly' | 'monthly' | 'yearly') => {
     try {
-      // Start session
-      const startRes = await fetch(`${API_URL}/pomodoro/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: payload.title,
-          durationMinutes: payload.durationMinutes,
-          tacticId: payload.tacticId,
-          tags: payload.tags,
-        }),
-      });
-
-      if (startRes.ok) {
-        const session = await startRes.json();
-        // Complete session
-        await fetch(`${API_URL}/pomodoro/${session.id}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            outputSummary: payload.outputSummary,
-            reflectionNotes: payload.reflectionNotes,
-          }),
-        });
-
-        fetchData();
+      const res = await authFetch(`${API_URL}/analytics/project-distribution?timeframe=${tf}`);
+      if (res.ok) {
+        const text = await res.text();
+        if (text) {
+          const json = JSON.parse(text);
+          setDistribution(json.distribution || []);
+        }
       }
     } catch (e) {
-      console.error('Error recording pomodoro session:', e);
+      console.error(e);
     }
   };
 
-  // Handle Promote submit
+  const handleTrendTimeframe = async (tf: 'daily' | 'weekly' | 'monthly') => {
+    try {
+      const res = await authFetch(`${API_URL}/analytics/trend-charts?timeframe=${tf}`);
+      if (res.ok) {
+        const text = await res.text();
+        if (text) setTrendData(JSON.parse(text));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handlePromoteSubmit = async (sessionId: number, tacticId: number) => {
     try {
-      const res = await fetch(`${API_URL}/pomodoro/${sessionId}/promote`, {
+      const res = await authFetch(`${API_URL}/pomodoro/${sessionId}/promote`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tacticId }),
@@ -148,29 +178,26 @@ export default function PomodoroAnalyticsPage() {
   if (!mounted) return null;
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12">
-
-      <main className="max-w-7xl mx-auto space-y-8">
-        {/* Navigation & Title Header */}
+    <div suppressHydrationWarning className="min-h-screen bg-[#0f0f15] text-slate-100 p-6 md:p-10 space-y-8 select-none">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Navigation & Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
           <div className="flex items-center gap-3">
             <Link
-              href="/dashboard"
-              className="p-2.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-all hover:scale-105"
+              href="/focus"
+              className="p-2.5 rounded-xl bg-[#181824] text-slate-400 hover:text-white border border-slate-800 transition-all hover:scale-105"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-black tracking-tight text-white">
-                  Pomodoro & Productivity Monitoring Analytics
+                <Flame className="w-5 h-5 text-rose-500 fill-current" />
+                <h1 className="text-2xl font-black text-white tracking-tight">
+                  Focus To-Do Statistics & Monitoring
                 </h1>
-                <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
-                  Realtime Monitoring
-                </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Theo dõi kết quả thực sự từng ngày, phân tích mật độ Deep Work và kết nối chiến lược 12-Week Year.
+              <p className="text-xs text-slate-400 mt-0.5">
+                Deep work analytics, project distribution & 12-Week Goal execution trends
               </p>
             </div>
           </div>
@@ -179,74 +206,75 @@ export default function PomodoroAnalyticsPage() {
             <button
               onClick={fetchData}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold transition-all"
+              className="p-2.5 rounded-xl bg-[#181824] text-slate-400 hover:text-white border border-slate-800 transition-all"
+              title="Refresh Analytics"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Làm mới dữ liệu
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <Link
-              href="/dashboard"
-              className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 text-xs font-bold shadow-md shadow-emerald-500/20 transition-all"
+              href="/focus"
+              className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs shadow-lg shadow-rose-500/20 transition-all"
             >
-              Quay lại 12-Week Architect
+              🍅 Open Focus Mode
             </Link>
           </div>
         </div>
 
-        {/* Grid Layout: Timer Widget + Filter Bar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Column 1: Pomodoro Timer Widget */}
-          <div className="lg:col-span-1">
-            <PomodoroTimerWidget
-              tactics={tactics}
-              onSessionComplete={handleSessionComplete}
-            />
-          </div>
+        {/* Panel 1: Top 6 Overview Metric Cards */}
+        <OverviewMetricsCards
+          totalFocusMinutes={overviewMetrics.totalFocusMinutes}
+          weekFocusMinutes={overviewMetrics.weekFocusMinutes}
+          todayFocusMinutes={overviewMetrics.todayFocusMinutes}
+          totalCompletedTasks={overviewMetrics.totalCompletedTasks}
+          weekCompletedTasks={overviewMetrics.weekCompletedTasks}
+          todayCompletedTasks={overviewMetrics.todayCompletedTasks}
+        />
 
-          {/* Column 2 & 3: GitHub Heatmap + Filter Bar + Daily Activity Feed */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Filter Bar */}
-            <PomodoroFilterBar
-              timeframe={timeframe}
-              onTimeframeChange={setTimeframe}
-              selectedTacticId={selectedTacticId}
-              onTacticChange={setSelectedTacticId}
-              isUnplannedFilter={isUnplannedFilter}
-              onUnplannedChange={setIsUnplannedFilter}
-              tactics={tactics}
-            />
+        {/* Panel 2: Pomodoro Records Matrix */}
+        <PomodoroRecordsMatrix days={matrixDays} />
 
-            {/* GitHub Style Heatmap Grid */}
-            <GitHubHeatmap
-              range={range}
-              onRangeChange={setRange}
-              days={(heatmapData.days as unknown as React.ComponentProps<typeof GitHubHeatmap>['days']) || []}
-              hourlyDistribution={(heatmapData.hourlyDistribution as unknown as React.ComponentProps<typeof GitHubHeatmap>['hourlyDistribution']) || []}
-              totalFocusMinutes={heatmapData.totalMinutes || 0}
-              totalSessions={heatmapData.totalSessions || 0}
-            />
-
-
-            {/* Shaded Daily Activity Feed */}
-            <DailyActivityFeed
-              days={dailyBreakdown}
-              onPromoteClick={(session) => setPromoteSession(session)}
-            />
-          </div>
+        {/* Panel 3 & 4: Project Time Distribution + Focus Goal Calendar */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ProjectTimeDistribution
+            distribution={distribution}
+            onTimeframeChange={handleDistributionTimeframe}
+          />
+          <FocusGoalCalendar
+            targetHours={calendarData.targetHours}
+            focusDaysCount={calendarData.focusDaysCount}
+            completedGoalDaysCount={calendarData.completedGoalDaysCount}
+            completionRate={calendarData.completionRate}
+            calendarDays={calendarData.calendarDays}
+          />
         </div>
-      </main>
 
-      {/* Promote Modal */}
-      {promoteSession && (
+        {/* Panel 5: Focus Time & Task Trend Charts */}
+        <FocusTrendCharts
+          focusStats={trendData.focusStats}
+          taskStats={trendData.taskStats}
+          series={trendData.series}
+          onTimeframeChange={handleTrendTimeframe}
+        />
+
+        {/* Panel 6: Daily Activity Breakdown Feed & Promote Modal */}
+        <div className="border-t border-slate-800/80 pt-6">
+          <DailyActivityFeed
+            days={dailyBreakdown}
+            onPromoteClick={(session) => setPromoteSession(session)}
+          />
+        </div>
+
+
         <PromoteModal
           isOpen={!!promoteSession}
-          onClose={() => setPromoteSession(null)}
-          sessionId={promoteSession.id}
-          sessionTitle={promoteSession.title}
+          sessionId={promoteSession?.id || 0}
+          sessionTitle={promoteSession?.title || ''}
           tactics={tactics}
+          onClose={() => setPromoteSession(null)}
           onPromoteSubmit={handlePromoteSubmit}
         />
-      )}
+
+      </div>
     </div>
   );
 }
