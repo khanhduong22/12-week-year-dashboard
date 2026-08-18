@@ -35,7 +35,8 @@ export default function PomodoroAnalyticsPage() {
   // Promote Modal state
   const [promoteSession, setPromoteSession] = useState<ActivitySession | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
