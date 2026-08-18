@@ -87,15 +87,15 @@ export default function FocusPage() {
         });
       }
 
-      // Fetch Goals for sidebar
-      const cyclesRes = await fetch(`${API_URL}/cycles`);
+      // Fetch Goals for sidebar from public active cycle endpoint
+      const cyclesRes = await fetch(`${API_URL}/cycles/active-public`);
       if (cyclesRes.ok) {
-        const cycles: CycleItem[] = await cyclesRes.json();
-        const activeCycle = cycles.find((c) => c.isActive) || cycles[0];
+        const activeCycle = await cyclesRes.json();
         if (activeCycle && activeCycle.goals) {
           setGoals(activeCycle.goals);
         }
       }
+
     } catch (e) {
       console.error('Error fetching tasks:', e);
     } finally {
