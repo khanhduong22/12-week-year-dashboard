@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 export interface DistributionItem {
   goalName: string;
@@ -28,16 +29,10 @@ export function ProjectTimeDistribution({
     if (onTimeframeChange) onTimeframeChange(tf);
   };
 
-  const colors = [
-    'bg-rose-500 text-rose-400 border-rose-500/30',
-    'bg-indigo-500 text-indigo-400 border-indigo-500/30',
-    'bg-emerald-500 text-emerald-400 border-emerald-500/30',
-    'bg-amber-500 text-amber-400 border-amber-500/30',
-    'bg-purple-500 text-purple-400 border-purple-500/30',
-  ];
+  const COLORS = ['#f43f5e', '#6366f1', '#10b981', '#f59e0b', '#a855f7', '#06b6d4'];
 
   return (
-    <div className="bg-[#181824] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-lg flex flex-col justify-between h-[360px]">
+    <div className="bg-[#181824] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-lg flex flex-col justify-between h-[360px] select-none">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-bold text-white tracking-wide">
@@ -82,41 +77,64 @@ export function ProjectTimeDistribution({
           <span className="text-xs font-medium">No Data</span>
         </div>
       ) : (
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-          {/* Progress Stack Bar */}
-          <div className="h-3 rounded-full bg-[#0f0f15] border border-slate-800 flex overflow-hidden">
-            {distribution.map((item, idx) => (
-              <div
-                key={item.goalName}
-                style={{ width: `${item.percentage}%` }}
-                className={`${colors[idx % colors.length].split(' ')[0]} transition-all`}
-                title={`${item.goalName}: ${item.percentage}% (${item.minutes}m)`}
-              />
-            ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 flex-1">
+          {/* Recharts Pie Chart */}
+          <div className="h-[180px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={distribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={75}
+                  paddingAngle={4}
+                  dataKey="minutes"
+                  nameKey="goalName"
+                >
+                  {distribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#181824',
+                    borderColor: '#334155',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: '#fff',
+                  }}
+                  formatter={(value: unknown) => [`${value} mins`, 'Focus Time']}
+                />
+
+
+
+
+
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Goal Item List */}
-          <div className="space-y-2 pt-1">
+          {/* Goal Item Legend List */}
+          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
             {distribution.map((item, idx) => {
-              const colorClass = colors[idx % colors.length];
+              const colorHex = COLORS[idx % COLORS.length];
               return (
                 <div
                   key={item.goalName}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#0f0f15] border border-slate-800/60 text-xs"
+                  className="flex items-center justify-between p-2 rounded-xl bg-[#0f0f15] border border-slate-800/60 text-xs"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-full ${colorClass.split(' ')[0]}`} />
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: colorHex }}
+                    />
                     <span className="font-semibold text-slate-200 truncate">{item.goalName}</span>
-                    <span className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded">
-                      {item.category}
-                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3 font-mono">
+                  <div className="flex items-center gap-2 font-mono flex-shrink-0">
                     <span className="text-slate-400 font-bold">{item.minutes}m</span>
-                    <span className={`font-black ${colorClass.split(' ')[1]}`}>
-                      {item.percentage}%
-                    </span>
+                    <span className="font-black text-rose-400">{item.percentage}%</span>
                   </div>
                 </div>
               );

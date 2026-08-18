@@ -2,6 +2,17 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts';
 
 export interface TrendPoint {
   date: string;
@@ -29,13 +40,15 @@ export function FocusTrendCharts({
     if (onTimeframeChange) onTimeframeChange(tf);
   };
 
-  const maxMins = Math.max(focusStats.topMinutes, 60);
-  const maxTasks = Math.max(taskStats.topTasks, 5);
+  const chartData = series.map((item) => ({
+    ...item,
+    shortDate: item.date.slice(5),
+  }));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* 1. Focus Time Chart */}
-      <div className="bg-[#181824] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-lg h-[320px] flex flex-col justify-between">
+      {/* 1. Focus Time Area Chart (Recharts) */}
+      <div className="bg-[#181824] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-lg h-[340px] flex flex-col justify-between select-none">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -53,9 +66,9 @@ export function FocusTrendCharts({
                   key={tf}
                   type="button"
                   onClick={() => handleTfClick(tf)}
-                  className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold capitalize transition-all ${
+                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold capitalize transition-all ${
                     activeTf === tf
-                      ? 'bg-[#222232] text-white border border-slate-700'
+                      ? 'bg-[#222232] text-white border border-slate-700 shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -66,52 +79,59 @@ export function FocusTrendCharts({
 
             <div className="flex items-center gap-0.5">
               <button className="p-1 rounded-lg bg-[#0f0f15] text-slate-400 hover:text-white border border-slate-800">
-                <ChevronLeft className="w-3 h-3" />
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button className="p-1 rounded-lg bg-[#0f0f15] text-slate-400 hover:text-white border border-slate-800">
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         </div>
 
-        {/* SVG Trend Line / Bar Chart */}
-        <div className="flex-1 flex items-end justify-between gap-2 pt-4 px-2 border-b border-slate-800/80">
-          {series.length === 0 ? (
-            <div className="w-full text-center text-xs text-slate-500 italic pb-8">
+        {/* Recharts Area Chart */}
+        <div className="flex-1 w-full pt-2">
+          {chartData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
               No Focus Time data
             </div>
           ) : (
-            series.map((item) => {
-              const heightPct = Math.min(100, Math.round((item.focusMinutes / maxMins) * 100));
-              const dateLabel = item.date.slice(5);
-
-              return (
-                <div key={item.date} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
-                  {/* Tooltip */}
-                  <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-all bg-rose-500 text-slate-950 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md pointer-events-none whitespace-nowrap">
-                    {item.focusMinutes}m ({item.date})
-                  </div>
-
-                  {/* Bar */}
-                  <div
-                    style={{ height: `${heightPct}%` }}
-                    className="w-full max-w-[18px] bg-rose-500 rounded-t-sm group-hover:bg-rose-400 transition-all min-h-[4px]"
-                  />
-
-                  {/* X Label */}
-                  <span className="text-[9px] font-mono text-slate-500 truncate w-full text-center">
-                    {dateLabel}
-                  </span>
-                </div>
-              );
-            })
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="roseGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222232" vertical={false} />
+                <XAxis dataKey="shortDate" stroke="#64748b" fontSize={10} tickLine={false} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#181824',
+                    borderColor: '#334155',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: '#fff',
+                  }}
+                  formatter={(value: unknown) => [`${value} minutes`, 'Focus Time']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="focusMinutes"
+                  stroke="#f43f5e"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#roseGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>
 
-      {/* 2. Task Completion Chart */}
-      <div className="bg-[#181824] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-lg h-[320px] flex flex-col justify-between">
+      {/* 2. Task Completion Bar Chart (Recharts) */}
+      <div className="bg-[#181824] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-lg h-[340px] flex flex-col justify-between select-none">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -129,9 +149,9 @@ export function FocusTrendCharts({
                   key={tf}
                   type="button"
                   onClick={() => handleTfClick(tf)}
-                  className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold capitalize transition-all ${
+                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold capitalize transition-all ${
                     activeTf === tf
-                      ? 'bg-[#222232] text-white border border-slate-700'
+                      ? 'bg-[#222232] text-white border border-slate-700 shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -142,46 +162,45 @@ export function FocusTrendCharts({
 
             <div className="flex items-center gap-0.5">
               <button className="p-1 rounded-lg bg-[#0f0f15] text-slate-400 hover:text-white border border-slate-800">
-                <ChevronLeft className="w-3 h-3" />
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button className="p-1 rounded-lg bg-[#0f0f15] text-slate-400 hover:text-white border border-slate-800">
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         </div>
 
-        {/* SVG Trend Line / Bar Chart */}
-        <div className="flex-1 flex items-end justify-between gap-2 pt-4 px-2 border-b border-slate-800/80">
-          {series.length === 0 ? (
-            <div className="w-full text-center text-xs text-slate-500 italic pb-8">
+        {/* Recharts Bar Chart */}
+        <div className="flex-1 w-full pt-2">
+          {chartData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
               No Task Completion data
             </div>
           ) : (
-            series.map((item) => {
-              const heightPct = Math.min(100, Math.round((item.completedTasks / maxTasks) * 100));
-              const dateLabel = item.date.slice(5);
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222232" vertical={false} />
+                <XAxis dataKey="shortDate" stroke="#64748b" fontSize={10} tickLine={false} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#181824',
+                    borderColor: '#334155',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: '#fff',
+                  }}
+                  formatter={(value: unknown) => [`${value} Tasks`, 'Completed Tasks']}
+                />
 
-              return (
-                <div key={item.date} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
-                  {/* Tooltip */}
-                  <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-all bg-sky-500 text-slate-950 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md pointer-events-none whitespace-nowrap">
-                    {item.completedTasks} Tasks ({item.date})
-                  </div>
 
-                  {/* Bar */}
-                  <div
-                    style={{ height: `${heightPct}%` }}
-                    className="w-full max-w-[18px] bg-sky-500 rounded-t-sm group-hover:bg-sky-400 transition-all min-h-[4px]"
-                  />
 
-                  {/* X Label */}
-                  <span className="text-[9px] font-mono text-slate-500 truncate w-full text-center">
-                    {dateLabel}
-                  </span>
-                </div>
-              );
-            })
+
+
+                <Bar dataKey="completedTasks" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>
