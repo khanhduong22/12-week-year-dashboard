@@ -73,7 +73,8 @@ export default function FocusPage() {
 
       const res = await authFetch(`${API_URL}/tasks?${queryStr}`);
       if (res.ok) {
-        const data = await res.json();
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
         setTasks(data.tasks || []);
         setMetrics({
           estimatedTimeText: data.metrics?.estimatedTimeText || '0m',
@@ -86,7 +87,8 @@ export default function FocusPage() {
       // Fetch Goals for sidebar from active cycle endpoint
       const cyclesRes = await authFetch(`${API_URL}/cycles/active-public`);
       if (cyclesRes.ok) {
-        const activeCycle = await cyclesRes.json();
+        const text = await cyclesRes.text();
+        const activeCycle = text ? JSON.parse(text) : null;
         if (activeCycle && activeCycle.goals) {
           setGoals(activeCycle.goals);
         }
@@ -186,12 +188,15 @@ export default function FocusPage() {
       });
 
       if (startRes.ok) {
-        const session = await startRes.json();
-        await authFetch(`${API_URL}/pomodoro/${session.id}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ outputSummary: payload.outputSummary }),
-        });
+        const text = await startRes.text();
+        const session = text ? JSON.parse(text) : null;
+        if (session && session.id) {
+          await authFetch(`${API_URL}/pomodoro/${session.id}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ outputSummary: payload.outputSummary }),
+          });
+        }
       }
 
       fetchTasks();
@@ -199,7 +204,6 @@ export default function FocusPage() {
       console.error('Error saving pomodoro finish:', e);
     }
   };
-
 
   const getViewTitle = () => {
     switch (activeView) {
@@ -222,7 +226,6 @@ export default function FocusPage() {
 
   return (
     <div suppressHydrationWarning className="flex h-screen bg-[#0f0f15] text-slate-100 overflow-hidden">
-
       {/* Left Focus Sidebar */}
       <FocusSidebar
         activeView={activeView}
@@ -299,11 +302,12 @@ export default function FocusPage() {
 
       {/* Floating Bottom Pomodoro Control Bar */}
       <PersistentBottomTimerBar
-        activeTaskTitle={activeTask?.title || 'Click ▶️ on a task to start Focus'}
+        activeTask={activeTask}
         onSessionFinish={handleSessionFinish}
       />
 
       {/* Focus Settings Modal */}
+
       <FocusSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

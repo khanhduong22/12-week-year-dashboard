@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle2, Volume2, Sparkles, X, Maximize2 } from 'lucide-react';
 
+
 interface PersistentBottomTimerBarProps {
-  activeTaskTitle?: string;
+  activeTask?: { id: number; title: string } | null;
   onSessionFinish?: (data: { outputSummary: string }) => void;
 }
 
 export function PersistentBottomTimerBar({
-  activeTaskTitle = 'Focus Session',
+  activeTask,
   onSessionFinish,
 }: PersistentBottomTimerBarProps) {
   const [minutes, setMinutes] = useState(25);
@@ -20,25 +21,43 @@ export function PersistentBottomTimerBar({
   const [outputSummary, setOutputSummary] = useState('');
   const [activeSound, setActiveSound] = useState<string | null>(null);
 
+  // When activeTask changes, reset timer to 25m and auto-start
+  useEffect(() => {
+    if (activeTask) {
+      setMinutes(25);
+      setSeconds(0);
+      setIsRunning(true);
+    }
+  }, [activeTask]);
+
+  // Robust countdown timer
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isRunning) {
       timer = setInterval(() => {
-        if (seconds > 0) {
-          setSeconds((s) => s - 1);
-        } else if (minutes > 0) {
-          setMinutes((m) => m - 1);
-          setSeconds(59);
-        } else {
-          setIsRunning(false);
-          setShowOutputModal(true);
-        }
+        setSeconds((prevSec) => {
+          if (prevSec > 0) {
+            return prevSec - 1;
+          } else {
+            setMinutes((prevMin) => {
+              if (prevMin > 0) {
+                return prevMin - 1;
+              } else {
+                // 25 minutes finished!
+                setIsRunning(false);
+                setShowOutputModal(true);
+                return 0;
+              }
+            });
+            return 59;
+          }
+        });
       }, 1000);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isRunning, minutes, seconds]);
+  }, [isRunning]);
 
   const togglePlayPause = () => {
     setIsRunning(!isRunning);
@@ -48,6 +67,11 @@ export function PersistentBottomTimerBar({
     setIsRunning(false);
     setMinutes(25);
     setSeconds(0);
+  };
+
+  const handleFinishEarly = () => {
+    setIsRunning(false);
+    setShowOutputModal(true);
   };
 
   const handleFinishSubmit = () => {
@@ -73,10 +97,12 @@ export function PersistentBottomTimerBar({
     { id: 'coffee', name: '☕ Coffee Shop' },
   ];
 
+  const activeTaskTitle = activeTask?.title || 'Focus Session';
+
   return (
     <>
       {/* Floating Bottom Bar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#181824]/95 border border-slate-700/80 rounded-full px-5 py-2.5 shadow-2xl backdrop-blur-xl flex items-center gap-4 border-slate-700 animate-slideUp">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#181824]/95 border border-slate-700/80 rounded-full px-5 py-2.5 shadow-2xl backdrop-blur-xl flex items-center gap-4 animate-slideUp">
         {/* Ring / Timer Badge */}
         <div className="flex items-center gap-2 bg-[#0f0f15] border border-slate-800 px-3 py-1 rounded-full font-mono text-sm font-black text-rose-400">
           <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-rose-500 animate-ping' : 'bg-slate-600'}`} />
@@ -90,6 +116,7 @@ export function PersistentBottomTimerBar({
 
         {/* Play/Pause Button */}
         <button
+          type="button"
           onClick={togglePlayPause}
           className={`w-9 h-9 rounded-full flex items-center justify-center font-bold transition-all shadow-md ${
             isRunning
@@ -101,8 +128,21 @@ export function PersistentBottomTimerBar({
           {isRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
         </button>
 
+        {/* Early Finish Button */}
+        {isRunning && (
+          <button
+            type="button"
+            onClick={handleFinishEarly}
+            className="px-3 py-1 rounded-full text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all"
+            title="Finish Pomodoro session early"
+          >
+            Finish
+          </button>
+        )}
+
         {/* Expand / Fullscreen Focus Mode */}
         <button
+          type="button"
           onClick={() => setShowFullFocusModal(true)}
           className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
           title="Fullscreen Focus Mode"
@@ -121,6 +161,7 @@ export function PersistentBottomTimerBar({
               Focus Mode
             </div>
             <button
+              type="button"
               onClick={() => setShowFullFocusModal(false)}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
             >
@@ -144,6 +185,7 @@ export function PersistentBottomTimerBar({
               {sounds.map((snd) => (
                 <button
                   key={snd.id}
+                  type="button"
                   onClick={() => setActiveSound(activeSound === snd.id ? null : snd.id)}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
                     activeSound === snd.id
@@ -159,14 +201,24 @@ export function PersistentBottomTimerBar({
             {/* Controls */}
             <div className="flex items-center justify-center gap-4 pt-6">
               <button
+                type="button"
                 onClick={togglePlayPause}
                 className="px-8 py-3 rounded-2xl bg-rose-500 text-slate-950 font-black text-lg hover:bg-rose-400 shadow-xl shadow-rose-500/20 transition-all"
               >
                 {isRunning ? 'PAUSE' : 'START FOCUS'}
               </button>
               <button
+                type="button"
+                onClick={handleFinishEarly}
+                className="px-6 py-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold hover:bg-emerald-500/30 transition-all"
+              >
+                FINISH EARLY
+              </button>
+              <button
+                type="button"
                 onClick={resetTimer}
                 className="p-3 rounded-2xl bg-[#181824] border border-slate-800 text-slate-400 hover:text-white"
+                title="Reset Timer"
               >
                 <RotateCcw className="w-5 h-5" />
               </button>
@@ -190,7 +242,7 @@ export function PersistentBottomTimerBar({
 
             <textarea
               rows={3}
-              placeholder="Tóm tắt những gì bạn vừa hoàn thành..."
+              placeholder="Tóm tắt những gì bạn vừa hoàn thành trong phiên tập trung này..."
               value={outputSummary}
               onChange={(e) => setOutputSummary(e.target.value)}
               className="w-full bg-[#0f0f15] border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
@@ -198,12 +250,14 @@ export function PersistentBottomTimerBar({
 
             <div className="flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setShowOutputModal(false)}
                 className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
               >
                 Bỏ qua
               </button>
               <button
+                type="button"
                 onClick={handleFinishSubmit}
                 className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-rose-400 hover:bg-rose-300"
               >
