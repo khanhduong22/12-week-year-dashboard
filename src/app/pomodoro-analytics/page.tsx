@@ -10,7 +10,13 @@ import { PomodoroFilterBar } from '@/components/pomodoro/PomodoroFilterBar';
 import { PromoteModal } from '@/components/pomodoro/PromoteModal';
 
 export default function PomodoroAnalyticsPage() {
+  const [mounted, setMounted] = useState(false);
   const [range, setRange] = useState<'week' | 'month' | 'year'>('month');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'all'>('month');
   const [selectedTacticId, setSelectedTacticId] = useState<number | undefined>(undefined);
   const [isUnplannedFilter, setIsUnplannedFilter] = useState<boolean | 'all'>('all');
@@ -138,8 +144,11 @@ export default function PomodoroAnalyticsPage() {
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12">
+    <div suppressHydrationWarning className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12">
+
       <main className="max-w-7xl mx-auto space-y-8">
         {/* Navigation & Title Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">

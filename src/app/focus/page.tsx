@@ -29,9 +29,15 @@ interface CycleItem {
 }
 
 export default function FocusPage() {
+  const [mounted, setMounted] = useState(false);
   const [activeView, setActiveView] = useState<SmartViewType | string>('today');
   const [selectedTacticId, setSelectedTacticId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   // Tasks & Metrics State
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -215,8 +221,11 @@ export default function FocusPage() {
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <div className="flex h-screen bg-[#0f0f15] text-slate-100 overflow-hidden">
+    <div suppressHydrationWarning className="flex h-screen bg-[#0f0f15] text-slate-100 overflow-hidden">
+
       {/* Left Focus Sidebar */}
       <FocusSidebar
         activeView={activeView}

@@ -42,8 +42,14 @@ export type DailyLog = {
 };
 
 export default function DashboardPage() {
+  const [mounted, setMounted] = useState(false);
   const { data: session, status } = useSession();
   const authFetch = useAuthFetch();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [tactics, setTactics] = useState<Tactic[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -151,12 +157,16 @@ export default function DashboardPage() {
   const score = totalExpectedActions > 0 ? (totalCompletedActions / totalExpectedActions) * 100 : 100;
   const isWarning = score < 85 && currentWeekLogs.length > 0;
 
+  if (!mounted) return null;
+
   return (
     <div
+      suppressHydrationWarning
       className={`min-h-screen transition-colors duration-700 ${
         isWarning ? "bg-red-950/20" : "bg-zinc-950"
       }`}
     >
+
       <main className="max-w-6xl mx-auto p-6 pt-12 md:p-12 text-foreground">
         <div className="mb-8 space-y-4 flex flex-col md:flex-row md:justify-between md:items-start">
           <div>
