@@ -10,6 +10,8 @@ import { FocusTaskList, TaskItem } from '@/components/focustodo/FocusTaskList';
 import { PersistentBottomTimerBar } from '@/components/focustodo/PersistentBottomTimerBar';
 import { FocusSettingsModal } from '@/components/focustodo/FocusSettingsModal';
 
+import { useAuthFetch } from '@/lib/useAuthFetch';
+
 interface TacticItem {
   id: number;
   name: string;
@@ -22,22 +24,17 @@ interface GoalItem {
   tactics?: TacticItem[];
 }
 
-interface CycleItem {
-  id: number;
-  isActive: boolean;
-  goals?: GoalItem[];
-}
-
 export default function FocusPage() {
   const [mounted, setMounted] = useState(false);
   const [activeView, setActiveView] = useState<SmartViewType | string>('today');
   const [selectedTacticId, setSelectedTacticId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
+  const authFetch = useAuthFetch();
+
   useEffect(() => {
     setMounted(true);
   }, []);
-
 
   // Tasks & Metrics State
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -64,7 +61,6 @@ export default function FocusPage() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
@@ -75,7 +71,7 @@ export default function FocusPage() {
         queryStr = `smartView=${activeView}`;
       }
 
-      const res = await fetch(`${API_URL}/tasks?${queryStr}`);
+      const res = await authFetch(`${API_URL}/tasks?${queryStr}`);
       if (res.ok) {
         const data = await res.json();
         setTasks(data.tasks || []);
@@ -87,21 +83,20 @@ export default function FocusPage() {
         });
       }
 
-      // Fetch Goals for sidebar from public active cycle endpoint
-      const cyclesRes = await fetch(`${API_URL}/cycles/active-public`);
+      // Fetch Goals for sidebar from active cycle endpoint
+      const cyclesRes = await authFetch(`${API_URL}/cycles/active-public`);
       if (cyclesRes.ok) {
         const activeCycle = await cyclesRes.json();
         if (activeCycle && activeCycle.goals) {
           setGoals(activeCycle.goals);
         }
       }
-
     } catch (e) {
       console.error('Error fetching tasks:', e);
     } finally {
       setLoading(false);
     }
-  }, [API_URL, activeView, selectedTacticId]);
+  }, [API_URL, activeView, authFetch, selectedTacticId]);
 
   useEffect(() => {
     fetchTasks();
@@ -119,7 +114,7 @@ export default function FocusPage() {
     tacticId?: number;
   }) => {
     try {
-      const res = await fetch(`${API_URL}/tasks`, {
+      const res = await authFetch(`${API_URL}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,7 +135,7 @@ export default function FocusPage() {
 
   const handleToggleComplete = async (task: TaskItem) => {
     try {
-      const res = await fetch(`${API_URL}/tasks/${task.id}`, {
+      const res = await authFetch(`${API_URL}/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isCompleted: !task.isCompleted }),
@@ -160,7 +155,7 @@ export default function FocusPage() {
 
   const handleDeleteTask = async (id: number) => {
     try {
-      const res = await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
+      const res = await authFetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
       if (res.ok) {
         fetchTasks();
       }
@@ -173,14 +168,14 @@ export default function FocusPage() {
     if (!activeTask) return;
     try {
       // Increment task elapsed pomodoros
-      await fetch(`${API_URL}/tasks/${activeTask.id}`, {
+      await authFetch(`${API_URL}/tasks/${activeTask.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ elapsedPomodoros: activeTask.elapsedPomodoros + 1 }),
       });
 
       // Log Pomodoro session
-      const startRes = await fetch(`${API_URL}/pomodoro/start`, {
+      const startRes = await authFetch(`${API_URL}/pomodoro/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,7 +187,7 @@ export default function FocusPage() {
 
       if (startRes.ok) {
         const session = await startRes.json();
-        await fetch(`${API_URL}/pomodoro/${session.id}/complete`, {
+        await authFetch(`${API_URL}/pomodoro/${session.id}/complete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ outputSummary: payload.outputSummary }),
@@ -204,6 +199,7 @@ export default function FocusPage() {
       console.error('Error saving pomodoro finish:', e);
     }
   };
+
 
   const getViewTitle = () => {
     switch (activeView) {
